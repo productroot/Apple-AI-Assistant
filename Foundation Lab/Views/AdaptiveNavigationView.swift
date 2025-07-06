@@ -11,6 +11,7 @@ import FoundationModels
 struct AdaptiveNavigationView: View {
     @State private var contentViewModel = ContentViewModel()
     @State private var chatViewModel = ChatViewModel()
+    @State private var tasksViewModel = TasksViewModel()
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private let navigationCoordinator = NavigationCoordinator.shared
     
@@ -37,6 +38,12 @@ struct AdaptiveNavigationView: View {
             Tab("Examples", systemImage: "sparkles", value: .examples) {
                 NavigationStack {
                     ExamplesView(viewModel: $contentViewModel)
+                }
+            }
+            
+            Tab("Tasks", systemImage: "checklist", value: .tasks) {
+                NavigationStack {
+                    TasksView(viewModel: $tasksViewModel)
                 }
             }
             
@@ -86,6 +93,10 @@ struct AdaptiveNavigationView: View {
         case .examples:
             NavigationStack {
                 ExamplesView(viewModel: $contentViewModel)
+            }
+        case .tasks:
+            NavigationStack {
+                TasksView(viewModel: $tasksViewModel)
             }
         case .chat:
             NavigationStack {

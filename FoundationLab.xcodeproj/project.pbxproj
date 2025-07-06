@@ -8,15 +8,17 @@
 
 /* Begin PBXBuildFile section */
 		0A5454AB2E1148A8002C2152 /* Foundation Lab.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0A5454A72E1148A8002C2152 /* Foundation Lab.icon */; };
+		894F6A552E1B26DB0089EAEB /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 894F6A542E1B26DB0089EAEB /* CLAUDE.md */; };
 		FA43F9412E13A16E00F24BCC /* HighlightSwift in Frameworks */ = {isa = PBXBuildFile; productRef = FA43F9402E13A16E00F24BCC /* HighlightSwift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0A5454A72E1148A8002C2152 /* Foundation Lab.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Foundation Lab.icon"; sourceTree = "<group>"; };
 		0AAE4FFF2DF76E6600838F13 /* Foundation Lab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Foundation Lab.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		0ABC0C9B2E09AB5300A09018 /* Physiqa.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Physiqa.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		0ABC0C9B2E09AB5300A09018 /* Physiqa.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Physiqa.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0ADB46DC2E0CE81900C29293 /* Psylean.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Psylean.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0ADB48272E0D84EE00C29293 /* Murmer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Murmer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		894F6A542E1B26DB0089EAEB /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -32,7 +34,7 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0ABC0C9C2E09AB5300A09018 /* Physiqa */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Physiqa";
+			path = Physiqa;
 			sourceTree = "<group>";
 		};
 		0ADB46AD2E0CE6C100C29293 /* Foundation Lab */ = {
@@ -91,6 +93,7 @@
 		0AAE4FF62DF76E6600838F13 = {
 			isa = PBXGroup;
 			children = (
+				894F6A542E1B26DB0089EAEB /* CLAUDE.md */,
 				0ADB46AD2E0CE6C100C29293 /* Foundation Lab */,
 				0ABC0C9C2E09AB5300A09018 /* Physiqa */,
 				0ADB46DD2E0CE81900C29293 /* Psylean */,
@@ -152,10 +155,10 @@
 			fileSystemSynchronizedGroups = (
 				0ABC0C9C2E09AB5300A09018 /* Physiqa */,
 			);
-			name = "Physiqa";
+			name = Physiqa;
 			packageProductDependencies = (
 			);
-			productName = "Physiqa";
+			productName = Physiqa;
 			productReference = 0ABC0C9B2E09AB5300A09018 /* Physiqa.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -258,6 +261,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0A5454AB2E1148A8002C2152 /* Foundation Lab.icon in Resources */,
+				894F6A552E1B26DB0089EAEB /* CLAUDE.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -442,7 +446,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Foundation Lab/FoundationLab.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YQZQG7N4WG;
+				DEVELOPMENT_TEAM = 5VMX6H876T;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
@@ -485,7 +489,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.rudrankriyam.foundationlab;
+				PRODUCT_BUNDLE_IDENTIFIER = io.productroot.assistant;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
@@ -517,7 +521,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Foundation Lab/FoundationLab.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YQZQG7N4WG;
+				DEVELOPMENT_TEAM = 5VMX6H876T;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
@@ -560,7 +564,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.rudrankriyam.foundationlab;
+				PRODUCT_BUNDLE_IDENTIFIER = io.productroot.assistant;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
@@ -587,7 +591,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "Physiqa/Physiqa.entitlements";
+				CODE_SIGN_ENTITLEMENTS = Physiqa/Physiqa.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YQZQG7N4WG;
@@ -633,7 +637,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "Physiqa/Physiqa.entitlements";
+				CODE_SIGN_ENTITLEMENTS = Physiqa/Physiqa.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YQZQG7N4WG;

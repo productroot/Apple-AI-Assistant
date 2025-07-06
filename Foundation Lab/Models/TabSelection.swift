@@ -9,6 +9,7 @@ import Foundation
 
 enum TabSelection: String, CaseIterable, Hashable {
   case examples = "Examples"
+  case tasks = "Tasks"
   case chat = "Chat"
   case settings = "Settings"
 }
