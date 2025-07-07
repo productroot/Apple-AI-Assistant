@@ -120,7 +120,7 @@ enum TaskSection: String, CaseIterable {
 }
 
 // MARK: - Task Filter
-enum TaskFilter {
+enum TaskFilter: Hashable {
     case all
     case section(TaskSection)
     case area(Area)
