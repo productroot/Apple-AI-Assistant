@@ -30,7 +30,9 @@ final class iCloudService {
         set { 
             UserDefaults.standard.set(newValue, forKey: "iCloudEnabled")
             if newValue {
-                setupiCloud()
+                Task { @MainActor in
+                    setupiCloud()
+                }
             }
         }
     }
@@ -181,13 +183,17 @@ final class iCloudService {
         }
         
         changesOp.recordZoneChangeTokensUpdatedBlock = { _, token, _ in
-            self.serverChangeToken = token
+            Task { @MainActor in
+                self.serverChangeToken = token
+            }
         }
         
         changesOp.recordZoneFetchResultBlock = { zoneID, result in
             switch result {
             case .success(let (token, _, _)):
-                self.serverChangeToken = token
+                Task { @MainActor in
+                    self.serverChangeToken = token
+                }
             case .failure(let error):
                 print("Error fetching zone changes: \(error)")
             }
@@ -336,7 +342,9 @@ final class iCloudService {
         do {
             _ = try await privateDatabase.deleteRecordZone(withID: customZoneID)
             // Reset the change token
-            serverChangeToken = nil
+            await MainActor.run {
+                serverChangeToken = nil
+            }
             print("Deleted custom zone and all data")
             
             // Recreate the zone for future use
@@ -483,14 +491,16 @@ final class iCloudService {
     }
     
     func resetCloudKitConfiguration() {
-        // Clear all CloudKit related settings
-        UserDefaults.standard.removeObject(forKey: "iCloudEnabled")
-        UserDefaults.standard.removeObject(forKey: "lastSyncDate")
-        UserDefaults.standard.removeObject(forKey: "serverChangeToken")
-        UserDefaults.standard.synchronize()
-        hasInitialSchemaMismatch = false
-        serverChangeToken = nil
-        print("CloudKit configuration reset")
+        Task { @MainActor in
+            // Clear all CloudKit related settings
+            UserDefaults.standard.removeObject(forKey: "iCloudEnabled")
+            UserDefaults.standard.removeObject(forKey: "lastSyncDate")
+            UserDefaults.standard.removeObject(forKey: "serverChangeToken")
+            UserDefaults.standard.synchronize()
+            hasInitialSchemaMismatch = false
+            serverChangeToken = nil
+            print("CloudKit configuration reset")
+        }
     }
 }
 
