@@ -9,7 +9,7 @@ import SwiftUI
 
 struct TaskDetailView: View {
     @State var task: TodoTask
-    @Binding var viewModel: TasksViewModel
+    var viewModel: TasksViewModel
     @Environment(\.dismiss) private var dismiss
     
     @State private var isEditing = false

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct AddTaskView: View {
-    @Binding var viewModel: TasksViewModel
+    var viewModel: TasksViewModel
     @Environment(\.dismiss) private var dismiss
     
     @State private var title = ""

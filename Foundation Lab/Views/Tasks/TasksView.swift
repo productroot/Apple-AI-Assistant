@@ -8,10 +8,13 @@
 import SwiftUI
 
 struct TasksView: View {
-    @Binding var viewModel: TasksViewModel
+    let viewModel: TasksViewModel
     @State private var navigationPath = NavigationPath()
     @State private var showingAddTask = false
     @State private var showingQuickAddOverlay = false
+    @State private var isCreatingProject = false
+    @State private var newProjectName = ""
+    @State private var newProjectAreaId: UUID?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
@@ -25,7 +28,7 @@ struct TasksView: View {
                             TaskSectionRow(
                                 section: section,
                                 count: taskCount(for: section),
-                                viewModel: $viewModel
+                                viewModel: viewModel
                             )
                         }
                     }
@@ -37,7 +40,7 @@ struct TasksView: View {
                         TaskSectionRow(
                             section: .logbook,
                             count: taskCount(for: .logbook),
-                            viewModel: $viewModel
+                            viewModel: viewModel
                         )
                     }
                 }
@@ -67,10 +70,25 @@ struct TasksView: View {
                                 .padding(.vertical, 4)
                             }
                             
+                            // Inline project creation for this area
+                            if isCreatingProject && newProjectAreaId == area.id {
+                                InlineProjectCreationView(
+                                    projectName: $newProjectName,
+                                    selectedAreaId: $newProjectAreaId,
+                                    areas: viewModel.areas,
+                                    onSave: {
+                                        saveNewProject()
+                                    },
+                                    onCancel: {
+                                        cancelProjectCreation()
+                                    }
+                                )
+                            }
+                            
                             // Projects in this area
                             ForEach(viewModel.projects.filter { $0.areaId == area.id }) { project in
                                 NavigationLink(value: TaskFilter.project(project)) {
-                                    ProjectRow(project: project, viewModel: $viewModel)
+                                    ProjectRow(project: project, viewModel: viewModel)
                                 }
                             }
                         }
@@ -79,23 +97,38 @@ struct TasksView: View {
                 
                 // Projects without areas
                 let orphanProjects = viewModel.projects.filter { $0.areaId == nil }
-                if !orphanProjects.isEmpty {
+                if !orphanProjects.isEmpty || isCreatingProject {
                     Section("Projects") {
+                        if isCreatingProject && newProjectAreaId == nil {
+                            InlineProjectCreationView(
+                                projectName: $newProjectName,
+                                selectedAreaId: $newProjectAreaId,
+                                areas: viewModel.areas,
+                                onSave: {
+                                    saveNewProject()
+                                },
+                                onCancel: {
+                                    cancelProjectCreation()
+                                }
+                            )
+                        }
+                        
                         ForEach(orphanProjects) { project in
                             NavigationLink(value: TaskFilter.project(project)) {
-                                ProjectRow(project: project, viewModel: $viewModel)
+                                ProjectRow(project: project, viewModel: viewModel)
                             }
                         }
                     }
                 }
             }
+            .id(viewModel.projects.count)
             .listStyle(.insetGrouped)
             .navigationTitle("Tasks")
             .navigationDestination(for: TaskFilter.self) { filter in
-                TasksSectionDetailView(viewModel: $viewModel, filter: filter)
+                TasksSectionDetailView(viewModel: viewModel, filter: filter)
             }
             .sheet(isPresented: $showingAddTask) {
-                AddTaskView(viewModel: $viewModel)
+                AddTaskView(viewModel: viewModel)
             }
             }
             
@@ -135,8 +168,9 @@ struct TasksView: View {
                             showingAddTask = true
                         },
                         onProjectSelected: {
-                            // TODO: Show Add Project view
-                            print("Add Project selected")
+                            isCreatingProject = true
+                            newProjectName = ""
+                            newProjectAreaId = nil
                         },
                         onAreaSelected: {
                             // TODO: Show Add Area view
@@ -173,13 +207,39 @@ struct TasksView: View {
     private func areaTaskCount(for area: Area) -> Int {
         viewModel.tasks.filter { !$0.isCompleted && $0.areaId == area.id && $0.projectId == nil }.count
     }
+    
+    private func saveNewProject() {
+        guard !newProjectName.isEmpty else { return }
+        
+        let newProject = Project(
+            name: newProjectName,
+            areaId: newProjectAreaId,
+            color: "blue",
+            icon: "folder"
+        )
+        
+        viewModel.addProject(newProject)
+        
+        // Reset state after a slight delay to ensure UI updates
+        DispatchQueue.main.async {
+            self.isCreatingProject = false
+            self.newProjectName = ""
+            self.newProjectAreaId = nil
+        }
+    }
+    
+    private func cancelProjectCreation() {
+        isCreatingProject = false
+        newProjectName = ""
+        newProjectAreaId = nil
+    }
 }
 
 // MARK: - Task Section Row
 struct TaskSectionRow: View {
     let section: TaskSection
     let count: Int
-    @Binding var viewModel: TasksViewModel
+    let viewModel: TasksViewModel
     
     var body: some View {
         HStack {
@@ -227,7 +287,7 @@ struct AreaHeaderView: View {
 // MARK: - Project Row
 struct ProjectRow: View {
     let project: Project
-    @Binding var viewModel: TasksViewModel
+    let viewModel: TasksViewModel
     
     var body: some View {
         HStack(spacing: 12) {
@@ -276,5 +336,5 @@ struct CircularProgressView: View {
 }
 
 #Preview {
-    TasksView(viewModel: .constant(TasksViewModel()))
+    TasksView(viewModel: TasksViewModel())
 }

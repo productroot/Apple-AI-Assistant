@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct TasksSectionDetailView: View {
-    @Binding var viewModel: TasksViewModel
+    var viewModel: TasksViewModel
     let filter: TaskFilter
     @State private var showingAddTask = false
     @State private var selectedTask: TodoTask?
@@ -20,7 +20,7 @@ struct TasksSectionDetailView: View {
                 ForEach(filteredTasks) { task in
                     TaskRowView(
                         task: task,
-                        viewModel: $viewModel,
+                        viewModel: viewModel,
                         isSelected: viewModel.selectedTasks.contains(task.id),
                         onTap: {
                             if viewModel.isMultiSelectMode {
@@ -48,10 +48,10 @@ struct TasksSectionDetailView: View {
                 .padding()
         }
         .sheet(isPresented: $showingAddTask) {
-            AddTaskView(viewModel: $viewModel)
+            AddTaskView(viewModel: viewModel)
         }
         .sheet(item: $selectedTask) { task in
-            TaskDetailView(task: task, viewModel: $viewModel)
+            TaskDetailView(task: task, viewModel: viewModel)
         }
     }
     

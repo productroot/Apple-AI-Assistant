@@ -9,7 +9,7 @@ import SwiftUI
 
 struct TaskRowView: View {
     let task: TodoTask
-    @Binding var viewModel: TasksViewModel
+    var viewModel: TasksViewModel
     let isSelected: Bool
     let onTap: () -> Void
     

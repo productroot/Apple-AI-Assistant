@@ -43,7 +43,7 @@ struct AdaptiveNavigationView: View {
             
             Tab("Tasks", systemImage: "checklist", value: .tasks) {
                 NavigationStack {
-                    TasksView(viewModel: $tasksViewModel)
+                    TasksView(viewModel: tasksViewModel)
                 }
             }
             
@@ -96,7 +96,7 @@ struct AdaptiveNavigationView: View {
             }
         case .tasks:
             NavigationStack {
-                TasksView(viewModel: $tasksViewModel)
+                TasksView(viewModel: tasksViewModel)
             }
         case .chat:
             NavigationStack {
