@@ -1,10 +1,3 @@
-//
-//  TasksView.swift
-//  FoundationLab
-//
-//  Created by Assistant on 7/6/25.
-//
-
 import SwiftUI
 
 struct TasksView: View {
@@ -15,177 +8,205 @@ struct TasksView: View {
     @State private var isCreatingProject = false
     @State private var newProjectName = ""
     @State private var newProjectAreaId: UUID?
+    @State private var isCreatingArea = false
+    @State private var newAreaName = ""
+    @State private var areaToEdit: Area?
+    @State private var projectToEdit: Project?
+    @State private var showingDeleteAreaAlert = false
+    @State private var showingDeleteProjectAlert = false
+    @State private var areaToDelete: Area?
+    @State private var projectToDelete: Project?
+    @State private var editMode: EditMode = .inactive
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
         ZStack {
             NavigationStack(path: $navigationPath) {
-            List {
-                // Main Sections
-                Section {
-                    ForEach(TaskSection.allCases.filter { $0 != .logbook }, id: \.self) { section in
-                        NavigationLink(value: TaskFilter.section(section)) {
-                            TaskSectionRow(
-                                section: section,
-                                count: taskCount(for: section),
-                                viewModel: viewModel
-                            )
-                        }
-                    }
-                }
-                
-                // Logbook Section (separated)
-                Section {
-                    NavigationLink(value: TaskFilter.section(.logbook)) {
-                        TaskSectionRow(
-                            section: .logbook,
-                            count: taskCount(for: .logbook),
-                            viewModel: viewModel
-                        )
-                    }
-                }
-                
-                // Inline project creation (when no area is selected)
-                if isCreatingProject && newProjectAreaId == nil {
-                    Section {
-                        InlineProjectCreationView(
-                            projectName: $newProjectName,
-                            selectedAreaId: $newProjectAreaId,
-                            areas: viewModel.areas,
-                            onSave: {
-                                saveNewProject()
-                            },
-                            onCancel: {
-                                cancelProjectCreation()
-                            }
-                        )
-                    }
-                }
-                
-                // Areas & Projects
-                if !viewModel.areas.isEmpty {
-                    ForEach(viewModel.areas) { area in
-                        Section(header: AreaHeaderView(area: area)) {
-                            // Area tasks
-                            NavigationLink(value: TaskFilter.area(area)) {
-                                HStack {
-                                    Image(systemName: area.icon)
-                                        .foregroundStyle(Color(area.color))
-                                        .frame(width: 28)
-                                    
-                                    Text(area.name)
-                                        .font(.body)
-                                    
-                                    Spacer()
-                                    
-                                    if areaTaskCount(for: area) > 0 {
-                                        Text("\(areaTaskCount(for: area))")
-                                            .font(.footnote)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                                .padding(.vertical, 4)
-                            }
-                            
-                            // Inline project creation for this area
-                            if isCreatingProject && newProjectAreaId == area.id {
-                                InlineProjectCreationView(
-                                    projectName: $newProjectName,
-                                    selectedAreaId: $newProjectAreaId,
-                                    areas: viewModel.areas,
-                                    onSave: {
-                                        saveNewProject()
-                                    },
-                                    onCancel: {
-                                        cancelProjectCreation()
-                                    }
-                                )
-                            }
-                            
-                            // Projects in this area
-                            ForEach(viewModel.projects.filter { $0.areaId == area.id }) { project in
-                                NavigationLink(value: TaskFilter.project(project)) {
-                                    ProjectRow(project: project, viewModel: viewModel)
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Projects without areas
-                let orphanProjects = viewModel.projects.filter { $0.areaId == nil }
-                if !orphanProjects.isEmpty {
-                    Section("Projects") {
-                        ForEach(orphanProjects) { project in
-                            NavigationLink(value: TaskFilter.project(project)) {
-                                ProjectRow(project: project, viewModel: viewModel)
-                            }
-                        }
-                    }
-                }
-            }
-            .id(viewModel.projects.count)
-            .listStyle(.insetGrouped)
-            .navigationTitle("Tasks")
-            .navigationDestination(for: TaskFilter.self) { filter in
-                TasksSectionDetailView(viewModel: viewModel, filter: filter)
-            }
-            .sheet(isPresented: $showingAddTask) {
-                AddTaskView(viewModel: viewModel)
-            }
+                tasksList
             }
             
-            // Floating Action Button
-            if !showingQuickAddOverlay {
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        FloatingActionButton {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                showingQuickAddOverlay = true
-                            }
-                        }
-                        .padding()
-                    }
-                }
-                .transition(.scale.combined(with: .opacity))
+            overlayViews
+        }
+    }
+    
+    private var tasksList: some View {
+        List {
+            mainSections
+            areasSection
+            orphanProjectsSection
+        }
+        .id("\(viewModel.projects.count)-\(viewModel.areas.count)-\(viewModel.tasks.count)")
+        .listStyle(.insetGrouped)
+        .navigationTitle("Tasks (\(viewModel.projects.count) projects)")
+        .navigationDestination(for: TaskFilter.self) { filter in
+            TasksSectionDetailView(viewModel: viewModel, filter: filter)
+        }
+        .environment(\.editMode, $editMode)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                EditButton()
             }
-            
-            // Overlay for quick add menu
-            if showingQuickAddOverlay {
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            showingQuickAddOverlay = false
-                        }
-                    }
-                
-                VStack {
-                    Spacer()
-                    
-                    QuickAddOverlay(
-                        isPresented: $showingQuickAddOverlay,
-                        onTaskSelected: {
-                            showingAddTask = true
-                        },
-                        onProjectSelected: {
-                            isCreatingProject = true
-                            newProjectName = ""
-                            newProjectAreaId = nil
-                        },
-                        onAreaSelected: {
-                            // TODO: Show Add Area view
-                            print("Add Area selected")
-                        }
+        }
+        .sheet(isPresented: $showingAddTask) {
+            AddTaskView(viewModel: viewModel)
+        }
+        .sheet(item: $areaToEdit) { area in
+            EditAreaView(viewModel: viewModel, area: area)
+        }
+        .sheet(item: $projectToEdit) { project in
+            EditProjectView(viewModel: viewModel, project: project)
+        }
+        .alert("Delete Area", isPresented: $showingDeleteAreaAlert, presenting: areaToDelete) { area in
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteArea(area)
+            }
+        } message: { area in
+            Text("Are you sure you want to delete \"\(area.name)\"? This will also delete all projects and tasks within this area.")
+        }
+        .alert("Delete Project", isPresented: $showingDeleteProjectAlert, presenting: projectToDelete) { project in
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteProject(project)
+            }
+        } message: { project in
+            Text("Are you sure you want to delete \"\(project.name)\"? This will also delete all tasks within this project.")
+        }
+    }
+    
+    @ViewBuilder
+    private var mainSections: some View {
+        Section {
+            ForEach(TaskSection.allCases.filter { $0 != .logbook }, id: \.self) { section in
+                NavigationLink(value: TaskFilter.section(section)) {
+                    TaskSectionRow(
+                        section: section,
+                        count: taskCount(for: section),
+                        viewModel: viewModel
                     )
-                    .frame(maxWidth: 400)
-                    .padding(.horizontal, 40)
-                    .padding(.bottom, 30)
                 }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
+        }
+        
+        Section {
+            NavigationLink(value: TaskFilter.section(.logbook)) {
+                TaskSectionRow(
+                    section: .logbook,
+                    count: taskCount(for: .logbook),
+                    viewModel: viewModel
+                )
+            }
+        }
+        
+        if isCreatingProject && newProjectAreaId == nil {
+            Section {
+                InlineProjectCreationView(
+                    projectName: $newProjectName,
+                    selectedAreaId: $newProjectAreaId,
+                    areas: viewModel.areas,
+                    onSave: { saveNewProject() },
+                    onCancel: { cancelProjectCreation() }
+                )
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var areasSection: some View {
+        if !viewModel.areas.isEmpty || isCreatingArea {
+            if isCreatingArea {
+                Section {
+                    InlineAreaCreationView(
+                        areaName: $newAreaName,
+                        onSave: { saveNewArea() },
+                        onCancel: { cancelAreaCreation() }
+                    )
+                }
+            }
+            
+            ForEach(viewModel.areas) { area in
+                AreaSectionView(
+                    area: area,
+                    viewModel: viewModel,
+                    isCreatingProject: $isCreatingProject,
+                    newProjectName: $newProjectName,
+                    newProjectAreaId: $newProjectAreaId,
+                    areaToEdit: $areaToEdit,
+                    areaToDelete: $areaToDelete,
+                    showingDeleteAreaAlert: $showingDeleteAreaAlert,
+                    projectToEdit: $projectToEdit,
+                    projectToDelete: $projectToDelete,
+                    showingDeleteProjectAlert: $showingDeleteProjectAlert,
+                    onSaveProject: { saveNewProject() },
+                    onCancelProject: { cancelProjectCreation() }
+                )
+            }
+            .onMove { source, destination in
+                moveAreas(from: source, to: destination)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var orphanProjectsSection: some View {
+        OrphanProjectsSection(
+            viewModel: viewModel,
+            projectToEdit: $projectToEdit,
+            projectToDelete: $projectToDelete,
+            showingDeleteProjectAlert: $showingDeleteProjectAlert
+        )
+    }
+    
+    @ViewBuilder
+    private var overlayViews: some View {
+        if !showingQuickAddOverlay {
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    FloatingActionButton(action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            showingQuickAddOverlay = true
+                        }
+                    })
+                        .padding(.trailing, 16)
+                        .padding(.bottom, 16)
+                }
+            }
+        }
+        
+        if showingQuickAddOverlay {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        showingQuickAddOverlay = false
+                    }
+                }
+            
+            VStack {
+                Spacer()
+                
+                QuickAddOverlay(
+                    isPresented: $showingQuickAddOverlay,
+                    onTaskSelected: {
+                        showingAddTask = true
+                    },
+                    onProjectSelected: {
+                        isCreatingProject = true
+                        newProjectName = ""
+                        newProjectAreaId = nil
+                    },
+                    onAreaSelected: {
+                        isCreatingArea = true
+                        newAreaName = ""
+                    }
+                )
+                .frame(maxWidth: 400)
+                .padding(.horizontal, 40)
+                .padding(.bottom, 30)
+            }
+            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
     
@@ -208,27 +229,31 @@ struct TasksView: View {
     }
     
     private func areaTaskCount(for area: Area) -> Int {
-        viewModel.tasks.filter { !$0.isCompleted && $0.areaId == area.id && $0.projectId == nil }.count
+        viewModel.tasks.filter { !$0.isCompleted && $0.areaId == area.id }.count
+    }
+    
+    private func projectTaskCount(for project: Project) -> Int {
+        viewModel.tasks.filter { !$0.isCompleted && $0.projectId == project.id }.count
     }
     
     private func saveNewProject() {
-        guard !newProjectName.isEmpty else { return }
+        guard !newProjectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
+        let trimmedName = newProjectName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let areaId = newProjectAreaId
+        
+        // Reset state immediately
+        isCreatingProject = false
+        newProjectName = ""
+        newProjectAreaId = nil
+        
+        // Create and add project
         let newProject = Project(
-            name: newProjectName,
-            areaId: newProjectAreaId,
-            color: "blue",
-            icon: "folder"
+            name: trimmedName,
+            areaId: areaId
         )
         
         viewModel.addProject(newProject)
-        
-        // Reset state after a slight delay to ensure UI updates
-        DispatchQueue.main.async {
-            self.isCreatingProject = false
-            self.newProjectName = ""
-            self.newProjectAreaId = nil
-        }
     }
     
     private func cancelProjectCreation() {
@@ -236,108 +261,66 @@ struct TasksView: View {
         newProjectName = ""
         newProjectAreaId = nil
     }
-}
-
-// MARK: - Task Section Row
-struct TaskSectionRow: View {
-    let section: TaskSection
-    let count: Int
-    let viewModel: TasksViewModel
     
-    var body: some View {
-        HStack {
-            Image(systemName: section.icon)
-                .foregroundStyle(section.color)
-                .font(.title3)
-                .frame(width: 28)
-            
-            Text(section.rawValue)
-                .font(.body)
-            
-            Spacer()
-            
-            if count > 0 {
-                Text("\(count)")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(Color(.systemGray5))
-                    .cornerRadius(6)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-// MARK: - Area Header View
-struct AreaHeaderView: View {
-    let area: Area
-    
-    var body: some View {
-        HStack {
-            Image(systemName: area.icon)
-                .foregroundStyle(Color(area.color))
-                .font(.caption)
-            
-            Text(area.name.uppercased())
-                .font(.caption)
-                .fontWeight(.medium)
+    private func saveNewArea() {
+        guard !newAreaName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
+        let newArea = Area(
+            name: newAreaName.trimmingCharacters(in: .whitespacesAndNewlines),
+            icon: "square.stack.3d.up",
+            color: "blue"
+        )
+        
+        viewModel.addArea(newArea, at: 0)
+        
+        DispatchQueue.main.async {
+            self.isCreatingArea = false
+            self.newAreaName = ""
         }
     }
-}
-
-// MARK: - Project Row
-struct ProjectRow: View {
-    let project: Project
-    let viewModel: TasksViewModel
     
-    var body: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(Color(project.color))
-                .frame(width: 8, height: 8)
-                .padding(.leading, 20)
-            
-            Text(project.name)
-                .font(.body)
-            
-            Spacer()
-            
-            if project.progress > 0 {
-                CircularProgressView(progress: project.progress)
-                    .frame(width: 20, height: 20)
-            }
-            
-            let taskCount = viewModel.tasks.filter { !$0.isCompleted && $0.projectId == project.id }.count
-            if taskCount > 0 {
-                Text("\(taskCount)")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 4)
+    private func cancelAreaCreation() {
+        isCreatingArea = false
+        newAreaName = ""
     }
-}
-
-// MARK: - Circular Progress View
-struct CircularProgressView: View {
-    let progress: Double
     
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.gray.opacity(0.3), lineWidth: 2)
-            
-            Circle()
-                .trim(from: 0, to: progress)
-                .stroke(Color.blue, lineWidth: 2)
-                .rotationEffect(.degrees(-90))
-                .animation(.easeInOut, value: progress)
+    private func deleteArea(_ area: Area) {
+        viewModel.deleteArea(area)
+    }
+    
+    private func deleteProject(_ project: Project) {
+        viewModel.deleteProject(project)
+    }
+    
+    // MARK: - Drag & Drop Helpers
+    private func moveAreas(from source: IndexSet, to destination: Int) {
+        viewModel.areas.move(fromOffsets: source, toOffset: destination)
+        if let firstArea = viewModel.areas.first {
+            viewModel.updateArea(firstArea)
         }
     }
-}
-
-#Preview {
-    TasksView(viewModel: TasksViewModel())
+    
+    private func moveProjects(in area: Area, from source: IndexSet, to destination: Int) {
+        var areaProjects = viewModel.projects.filter { $0.areaId == area.id }
+        areaProjects.move(fromOffsets: source, toOffset: destination)
+        
+        let otherProjects = viewModel.projects.filter { $0.areaId != area.id }
+        viewModel.projects = otherProjects + areaProjects
+        
+        if let firstProject = viewModel.projects.first {
+            viewModel.updateProject(firstProject)
+        }
+    }
+    
+    private func moveOrphanProjects(from source: IndexSet, to destination: Int) {
+        var orphanProjects = viewModel.projects.filter { $0.areaId == nil }
+        orphanProjects.move(fromOffsets: source, toOffset: destination)
+        
+        let areaProjects = viewModel.projects.filter { $0.areaId != nil }
+        viewModel.projects = areaProjects + orphanProjects
+        
+        if let firstProject = viewModel.projects.first {
+            viewModel.updateProject(firstProject)
+        }
+    }
 }

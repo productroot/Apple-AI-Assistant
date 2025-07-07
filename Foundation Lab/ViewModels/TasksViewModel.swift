@@ -134,6 +134,7 @@ final class TasksViewModel {
     // MARK: - Project Management
     func addProject(_ project: Project) {
         projects.append(project)
+        print("DEBUG: Added project '\(project.name)' with id \(project.id), total projects: \(projects.count)")
         saveToiCloudIfEnabled()
     }
     
@@ -151,8 +152,12 @@ final class TasksViewModel {
     }
     
     // MARK: - Area Management
-    func addArea(_ area: Area) {
-        areas.append(area)
+    func addArea(_ area: Area, at index: Int? = nil) {
+        if let index = index, index >= 0 && index <= areas.count {
+            areas.insert(area, at: index)
+        } else {
+            areas.append(area)
+        }
         saveToiCloudIfEnabled()
     }
     
@@ -331,13 +336,19 @@ final class TasksViewModel {
             UserDefaults.standard.set(tasksData, forKey: "localTasks")
         }
         
-        if let projectsData = try? encoder.encode(projects) {
+        do {
+            let projectsData = try encoder.encode(projects)
             UserDefaults.standard.set(projectsData, forKey: "localProjects")
+            print("DEBUG: Saved \(projects.count) projects locally")
+        } catch {
+            print("ERROR: Failed to encode projects: \(error)")
         }
         
         if let areasData = try? encoder.encode(areas) {
             UserDefaults.standard.set(areasData, forKey: "localAreas")
         }
+        
+        UserDefaults.standard.synchronize()
     }
     
     private func saveToiCloudIfEnabled() {

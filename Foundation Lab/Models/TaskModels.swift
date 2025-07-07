@@ -7,9 +7,10 @@
 
 import Foundation
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - TodoTask Model
-struct TodoTask: Identifiable, Hashable, Codable {
+struct TodoTask: Identifiable, Hashable, Codable, Sendable {
     var id = UUID()
     var title: String
     var notes: String = ""
@@ -61,14 +62,14 @@ struct TodoTask: Identifiable, Hashable, Codable {
 }
 
 // MARK: - Checklist Item
-struct ChecklistItem: Identifiable, Hashable, Codable {
+struct ChecklistItem: Identifiable, Hashable, Codable, Sendable {
     var id = UUID()
     var title: String
     var isCompleted: Bool = false
 }
 
 // MARK: - Project Model
-struct Project: Identifiable, Hashable, Codable {
+struct Project: Identifiable, Hashable, Codable, Sendable {
     var id = UUID()
     var name: String
     var notes: String = ""
@@ -88,8 +89,9 @@ struct Project: Identifiable, Hashable, Codable {
     }
 }
 
+
 // MARK: - Area Model
-struct Area: Identifiable, Hashable, Codable {
+struct Area: Identifiable, Hashable, Codable, Sendable {
     var id = UUID()
     var name: String
     var icon: String = "folder"
@@ -140,3 +142,5 @@ enum TaskFilter: Hashable {
     case tag(String)
     case search(String)
 }
+
+

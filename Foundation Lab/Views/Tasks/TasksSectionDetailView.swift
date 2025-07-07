@@ -109,7 +109,7 @@ struct TasksSectionDetailView: View {
         }
         
         // Combined menu for project actions and filters
-        if case .project(let project) = filter {
+        if case .project(_) = filter {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Section {
