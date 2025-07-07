@@ -19,6 +19,10 @@ struct SettingsView: View {
   @State private var showingClearDataConfirmation = false
   @State private var isProcessing = false
   
+  // Add state to track iCloud status
+  @State private var iCloudEnabled = false
+  @State private var isSyncing = false
+  
   var body: some View {
     NavigationStack {
       Form {
@@ -83,16 +87,12 @@ struct SettingsView: View {
         }
         
         Section {
-          Toggle("Enable iCloud Sync", isOn: .init(
-            get: { iCloudService.shared.iCloudEnabled },
-            set: { newValue in
-              let oldValue = iCloudService.shared.iCloudEnabled
+          Toggle("Enable iCloud Sync", isOn: $iCloudEnabled)
+            .onChange(of: iCloudEnabled) { _, newValue in
               iCloudService.shared.iCloudEnabled = newValue
-              // Don't auto-sync on enable - let user do it manually
             }
-          ))
           
-          if iCloudService.shared.iCloudEnabled {
+          if iCloudEnabled {
             VStack(alignment: .leading, spacing: 12) {
               if let lastSync = iCloudService.shared.lastSyncDate {
                 HStack {
@@ -104,7 +104,7 @@ struct SettingsView: View {
                 .font(.caption)
               }
               
-              if iCloudService.shared.isSyncing {
+              if isSyncing {
                 HStack {
                   ProgressView()
                     .scaleEffect(0.8)
@@ -118,7 +118,7 @@ struct SettingsView: View {
                 tasksViewModel.syncWithiCloud()
               }
               .buttonStyle(.glassProminent)
-              .disabled(iCloudService.shared.isSyncing)
+              .disabled(isSyncing)
             }
           }
         } header: {
@@ -138,7 +138,7 @@ struct SettingsView: View {
               Text("Export to iCloud")
             }
           }
-          .disabled(isProcessing || !iCloudService.shared.iCloudEnabled)
+          .disabled(isProcessing || !iCloudEnabled)
           
           Button(action: {
             showingImportConfirmation = true
@@ -148,7 +148,7 @@ struct SettingsView: View {
               Text("Import from iCloud")
             }
           }
-          .disabled(isProcessing || !iCloudService.shared.iCloudEnabled)
+          .disabled(isProcessing || !iCloudEnabled)
           
           Button(action: {
             showingClearDataConfirmation = true
@@ -238,6 +238,22 @@ struct SettingsView: View {
         Button("Cancel", role: .cancel) { }
       } message: {
         Text("This will permanently delete all tasks from both local storage and iCloud. This action cannot be undone.")
+      }
+      .onAppear {
+        // Initialize the local state from the service
+        iCloudEnabled = iCloudService.shared.iCloudEnabled
+        isSyncing = iCloudService.shared.isSyncing
+      }
+      .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+        // Update local state when UserDefaults changes
+        iCloudEnabled = iCloudService.shared.iCloudEnabled
+      }
+      .task {
+        // Monitor iCloud service state changes
+        for await _ in Timer.publish(every: 0.5, on: .main, in: .common).autoconnect().values {
+          isSyncing = iCloudService.shared.isSyncing
+          iCloudEnabled = iCloudService.shared.iCloudEnabled
+        }
       }
     }
   }
