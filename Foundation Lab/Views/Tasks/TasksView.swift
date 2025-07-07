@@ -11,10 +11,12 @@ struct TasksView: View {
     @Binding var viewModel: TasksViewModel
     @State private var navigationPath = NavigationPath()
     @State private var showingAddTask = false
+    @State private var showingQuickAddOverlay = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
-        NavigationStack(path: $navigationPath) {
+        ZStack {
+            NavigationStack(path: $navigationPath) {
             List {
                 // Main Sections
                 Section {
@@ -92,17 +94,60 @@ struct TasksView: View {
             .navigationDestination(for: TaskFilter.self) { filter in
                 TasksSectionDetailView(viewModel: $viewModel, filter: filter)
             }
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showingAddTask = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                }
-            }
             .sheet(isPresented: $showingAddTask) {
                 AddTaskView(viewModel: $viewModel)
+            }
+            }
+            
+            // Floating Action Button
+            if !showingQuickAddOverlay {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        FloatingActionButton {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                showingQuickAddOverlay = true
+                            }
+                        }
+                        .padding()
+                    }
+                }
+                .transition(.scale.combined(with: .opacity))
+            }
+            
+            // Overlay for quick add menu
+            if showingQuickAddOverlay {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            showingQuickAddOverlay = false
+                        }
+                    }
+                
+                VStack {
+                    Spacer()
+                    
+                    QuickAddOverlay(
+                        isPresented: $showingQuickAddOverlay,
+                        onTaskSelected: {
+                            showingAddTask = true
+                        },
+                        onProjectSelected: {
+                            // TODO: Show Add Project view
+                            print("Add Project selected")
+                        },
+                        onAreaSelected: {
+                            // TODO: Show Add Area view
+                            print("Add Area selected")
+                        }
+                    )
+                    .frame(maxWidth: 400)
+                    .padding(.horizontal, 40)
+                    .padding(.bottom, 30)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
     }
