@@ -45,6 +45,23 @@ struct TasksView: View {
                     }
                 }
                 
+                // Inline project creation (when no area is selected)
+                if isCreatingProject && newProjectAreaId == nil {
+                    Section {
+                        InlineProjectCreationView(
+                            projectName: $newProjectName,
+                            selectedAreaId: $newProjectAreaId,
+                            areas: viewModel.areas,
+                            onSave: {
+                                saveNewProject()
+                            },
+                            onCancel: {
+                                cancelProjectCreation()
+                            }
+                        )
+                    }
+                }
+                
                 // Areas & Projects
                 if !viewModel.areas.isEmpty {
                     ForEach(viewModel.areas) { area in
@@ -97,22 +114,8 @@ struct TasksView: View {
                 
                 // Projects without areas
                 let orphanProjects = viewModel.projects.filter { $0.areaId == nil }
-                if !orphanProjects.isEmpty || isCreatingProject {
+                if !orphanProjects.isEmpty {
                     Section("Projects") {
-                        if isCreatingProject && newProjectAreaId == nil {
-                            InlineProjectCreationView(
-                                projectName: $newProjectName,
-                                selectedAreaId: $newProjectAreaId,
-                                areas: viewModel.areas,
-                                onSave: {
-                                    saveNewProject()
-                                },
-                                onCancel: {
-                                    cancelProjectCreation()
-                                }
-                            )
-                        }
-                        
                         ForEach(orphanProjects) { project in
                             NavigationLink(value: TaskFilter.project(project)) {
                                 ProjectRow(project: project, viewModel: viewModel)

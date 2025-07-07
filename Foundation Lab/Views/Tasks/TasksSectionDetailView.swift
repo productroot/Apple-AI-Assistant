@@ -12,6 +12,7 @@ struct TasksSectionDetailView: View {
     let filter: TaskFilter
     @State private var showingAddTask = false
     @State private var selectedTask: TodoTask?
+    @State private var showingDeleteAlert = false
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -52,6 +53,19 @@ struct TasksSectionDetailView: View {
         }
         .sheet(item: $selectedTask) { task in
             TaskDetailView(task: task, viewModel: viewModel)
+        }
+        .alert("Delete Project", isPresented: $showingDeleteAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                if case .project(let project) = filter {
+                    viewModel.deleteProject(project)
+                    dismiss()
+                }
+            }
+        } message: {
+            if case .project(let project) = filter {
+                Text("Are you sure you want to delete \"\(project.name)\"? This will also delete all tasks in this project.")
+            }
         }
     }
     
@@ -94,18 +108,53 @@ struct TasksSectionDetailView: View {
             .keyboardShortcut("n", modifiers: .command)
         }
         
-        ToolbarItem(placement: .secondaryAction) {
-            Menu {
-                ForEach(TodoTask.Priority.allCases, id: \.self) { priority in
-                    Button {
-                        // Filter by priority
-                    } label: {
-                        Label(priority.name, systemImage: "flag.fill")
-                            .foregroundStyle(priority.color)
+        // Combined menu for project actions and filters
+        if case .project(let project) = filter {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Section {
+                        Button {
+                            // TODO: Edit project
+                        } label: {
+                            Label("Edit Project", systemImage: "pencil")
+                        }
+                        
+                        Button(role: .destructive) {
+                            showingDeleteAlert = true
+                        } label: {
+                            Label("Delete Project", systemImage: "trash")
+                        }
                     }
+                    
+                    Section("Filter by Priority") {
+                        ForEach(TodoTask.Priority.allCases, id: \.self) { priority in
+                            Button {
+                                // TODO: Implement priority filtering
+                            } label: {
+                                Label(priority.name, systemImage: "flag.fill")
+                                    .foregroundStyle(priority.color)
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
-            } label: {
-                Image(systemName: "line.3.horizontal.decrease.circle")
+            }
+        } else {
+            // For non-project views, just show the filter
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    ForEach(TodoTask.Priority.allCases, id: \.self) { priority in
+                        Button {
+                            // TODO: Implement priority filtering
+                        } label: {
+                            Label(priority.name, systemImage: "flag.fill")
+                                .foregroundStyle(priority.color)
+                        }
+                    }
+                } label: {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                }
             }
         }
         
