@@ -48,7 +48,7 @@ struct TasksView: View {
                             NavigationLink(value: TaskFilter.area(area)) {
                                 HStack {
                                     Image(systemName: area.icon)
-                                        .foregroundStyle(area.color)
+                                        .foregroundStyle(Color(area.color))
                                         .frame(width: 28)
                                     
                                     Text(area.name)
@@ -169,7 +169,7 @@ struct AreaHeaderView: View {
     var body: some View {
         HStack {
             Image(systemName: area.icon)
-                .foregroundStyle(area.color)
+                .foregroundStyle(Color(area.color))
                 .font(.caption)
             
             Text(area.name.uppercased())
@@ -187,7 +187,7 @@ struct ProjectRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(project.color)
+                .fill(Color(project.color))
                 .frame(width: 8, height: 8)
                 .padding(.leading, 20)
             

@@ -55,7 +55,7 @@ struct AdaptiveNavigationView: View {
             
             Tab("Settings", systemImage: "gear", value: .settings) {
                 NavigationStack {
-                    SettingsView()
+                    SettingsView(tasksViewModel: tasksViewModel)
                 }
             }
         }
@@ -104,7 +104,7 @@ struct AdaptiveNavigationView: View {
             }
         case .settings:
             NavigationStack {
-                SettingsView()
+                SettingsView(tasksViewModel: tasksViewModel)
             }
         }
     }

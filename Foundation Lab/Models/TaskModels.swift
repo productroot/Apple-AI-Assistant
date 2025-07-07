@@ -9,26 +9,36 @@ import Foundation
 import SwiftUI
 
 // MARK: - TodoTask Model
-struct TodoTask: Identifiable, Hashable {
-    let id = UUID()
+struct TodoTask: Identifiable, Hashable, Codable {
+    var id = UUID()
     var title: String
     var notes: String = ""
     var isCompleted: Bool = false
-    var tags: Set<String> = []
+    var tags: [String] = []
     var dueDate: Date?
     var scheduledDate: Date?
-    var checklist: [ChecklistItem] = []
+    var checklistItems: [ChecklistItem] = []
     var projectId: UUID?
     var areaId: UUID?
-    var createdDate: Date = Date()
-    var completedDate: Date?
+    var createdAt: Date = Date()
+    var completionDate: Date?
     var priority: Priority = .none
+    var estimatedDuration: TimeInterval?
     
-    enum Priority: Int, CaseIterable {
-        case none = 0
-        case low = 1
-        case medium = 2
-        case high = 3
+    enum Priority: String, CaseIterable, Codable {
+        case none = "none"
+        case low = "low"
+        case medium = "medium"
+        case high = "high"
+        
+        var rawValue: String {
+            switch self {
+            case .none: return "none"
+            case .low: return "low"
+            case .medium: return "medium"
+            case .high: return "high"
+            }
+        }
         
         var color: Color {
             switch self {
@@ -51,24 +61,25 @@ struct TodoTask: Identifiable, Hashable {
 }
 
 // MARK: - Checklist Item
-struct ChecklistItem: Identifiable, Hashable {
-    let id = UUID()
+struct ChecklistItem: Identifiable, Hashable, Codable {
+    var id = UUID()
     var title: String
     var isCompleted: Bool = false
 }
 
 // MARK: - Project Model
-struct Project: Identifiable, Hashable {
-    let id = UUID()
+struct Project: Identifiable, Hashable, Codable {
+    var id = UUID()
     var name: String
     var notes: String = ""
     var deadline: Date?
     var areaId: UUID?
     var tasks: [TodoTask] = []
     var isCompleted: Bool = false
-    var createdDate: Date = Date()
-    var completedDate: Date?
-    var color: Color = .blue
+    var createdAt: Date = Date()
+    var completionDate: Date?
+    var color: String = "blue"
+    var icon: String = "folder"
     
     var progress: Double {
         guard !tasks.isEmpty else { return 0 }
@@ -78,13 +89,14 @@ struct Project: Identifiable, Hashable {
 }
 
 // MARK: - Area Model
-struct Area: Identifiable, Hashable {
-    let id = UUID()
+struct Area: Identifiable, Hashable, Codable {
+    var id = UUID()
     var name: String
     var icon: String = "folder"
-    var color: Color = .gray
+    var color: String = "gray"
     var projects: [Project] = []
     var tasks: [TodoTask] = []
+    var createdAt: Date = Date()
 }
 
 // MARK: - Task Section

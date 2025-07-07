@@ -80,7 +80,7 @@ struct AddTaskView: View {
                             ForEach(viewModel.projects) { project in
                                 HStack {
                                     Circle()
-                                        .fill(project.color)
+                                        .fill(Color(project.color))
                                         .frame(width: 8, height: 8)
                                     Text(project.name)
                                 }
@@ -117,12 +117,12 @@ struct AddTaskView: View {
     }
     
     private func addTodoTask() {
-        let tagSet = Set(tags.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
+        let tagArray = tags.split(separator: ",").map { String($0.trimmingCharacters(in: .whitespaces)) }
         
         let task = TodoTask(
             title: title,
             notes: notes,
-            tags: tagSet,
+            tags: tagArray,
             dueDate: dueDate,
             scheduledDate: scheduledDate,
             projectId: selectedProject?.id,

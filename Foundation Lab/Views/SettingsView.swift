@@ -13,6 +13,12 @@ struct SettingsView: View {
   @State private var showingAlert = false
   @State private var alertMessage = ""
   
+  let tasksViewModel: TasksViewModel
+  @State private var showingExportConfirmation = false
+  @State private var showingImportConfirmation = false
+  @State private var showingClearDataConfirmation = false
+  @State private var isProcessing = false
+  
   var body: some View {
     NavigationStack {
       Form {
@@ -77,6 +83,92 @@ struct SettingsView: View {
         }
         
         Section {
+          Toggle("Enable iCloud Sync", isOn: .init(
+            get: { iCloudService.shared.iCloudEnabled },
+            set: { newValue in
+              let oldValue = iCloudService.shared.iCloudEnabled
+              iCloudService.shared.iCloudEnabled = newValue
+              // Don't auto-sync on enable - let user do it manually
+            }
+          ))
+          
+          if iCloudService.shared.iCloudEnabled {
+            VStack(alignment: .leading, spacing: 12) {
+              if let lastSync = iCloudService.shared.lastSyncDate {
+                HStack {
+                  Text("Last synced")
+                  Spacer()
+                  Text(lastSync, style: .relative)
+                    .foregroundColor(.secondary)
+                }
+                .font(.caption)
+              }
+              
+              if iCloudService.shared.isSyncing {
+                HStack {
+                  ProgressView()
+                    .scaleEffect(0.8)
+                  Text("Syncing...")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                }
+              }
+              
+              Button("Sync Now") {
+                tasksViewModel.syncWithiCloud()
+              }
+              .buttonStyle(.glassProminent)
+              .disabled(iCloudService.shared.isSyncing)
+            }
+          }
+        } header: {
+          Text("iCloud Sync")
+        } footer: {
+          Text("Enable iCloud sync to keep your tasks backed up and synchronized across your devices.")
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+        
+        Section {
+          Button(action: {
+            showingExportConfirmation = true
+          }) {
+            HStack {
+              Image(systemName: "icloud.and.arrow.up")
+              Text("Export to iCloud")
+            }
+          }
+          .disabled(isProcessing || !iCloudService.shared.iCloudEnabled)
+          
+          Button(action: {
+            showingImportConfirmation = true
+          }) {
+            HStack {
+              Image(systemName: "icloud.and.arrow.down")
+              Text("Import from iCloud")
+            }
+          }
+          .disabled(isProcessing || !iCloudService.shared.iCloudEnabled)
+          
+          Button(action: {
+            showingClearDataConfirmation = true
+          }) {
+            HStack {
+              Image(systemName: "trash")
+              Text("Clear All Data")
+            }
+            .foregroundColor(.red)
+          }
+          .disabled(isProcessing)
+        } header: {
+          Text("Data Management")
+        } footer: {
+          Text("Export creates a backup of your tasks to iCloud. Import replaces local data with iCloud data. Clear removes all tasks from both local storage and iCloud.")
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+        
+        Section {
           Link(destination: URL(string: "https://github.com/rudrankriyam/Foundation-Models-Framework-Example/issues")!) {
             HStack {
               Text("Bug/Feature Request")
@@ -123,6 +215,30 @@ struct SettingsView: View {
       } message: {
         Text(alertMessage)
       }
+      .confirmationDialog("Export to iCloud", isPresented: $showingExportConfirmation) {
+        Button("Export") {
+          exportToiCloud()
+        }
+        Button("Cancel", role: .cancel) { }
+      } message: {
+        Text("This will upload all your tasks to iCloud. Existing iCloud data will be replaced.")
+      }
+      .confirmationDialog("Import from iCloud", isPresented: $showingImportConfirmation) {
+        Button("Import", role: .destructive) {
+          importFromiCloud()
+        }
+        Button("Cancel", role: .cancel) { }
+      } message: {
+        Text("This will replace all local tasks with data from iCloud. Your current local data will be lost.")
+      }
+      .confirmationDialog("Clear All Data", isPresented: $showingClearDataConfirmation) {
+        Button("Clear All", role: .destructive) {
+          clearAllData()
+        }
+        Button("Cancel", role: .cancel) { }
+      } message: {
+        Text("This will permanently delete all tasks from both local storage and iCloud. This action cannot be undone.")
+      }
     }
   }
   
@@ -146,8 +262,63 @@ struct SettingsView: View {
     alertMessage = "API key cleared"
     showingAlert = true
   }
+  
+  private func exportToiCloud() {
+    isProcessing = true
+    Task {
+      do {
+        try await tasksViewModel.exportToiCloud()
+        await MainActor.run {
+          alertMessage = "Tasks successfully exported to iCloud!"
+          showingAlert = true
+          isProcessing = false
+        }
+      } catch {
+        await MainActor.run {
+          alertMessage = "Export failed: \(error.localizedDescription)"
+          showingAlert = true
+          isProcessing = false
+        }
+      }
+    }
+  }
+  
+  private func importFromiCloud() {
+    isProcessing = true
+    Task {
+      do {
+        try await tasksViewModel.importFromiCloud()
+        await MainActor.run {
+          alertMessage = "Tasks successfully imported from iCloud!"
+          showingAlert = true
+          isProcessing = false
+        }
+      } catch iCloudError.syncInProgress {
+        await MainActor.run {
+          alertMessage = "Sync is already in progress. Please wait and try again."
+          showingAlert = true
+          isProcessing = false
+        }
+      } catch {
+        await MainActor.run {
+          let errorDetails = error.localizedDescription
+          alertMessage = "Import failed: \(errorDetails)\n\nPlease check your iCloud connection and try again."
+          showingAlert = true
+          isProcessing = false
+        }
+      }
+    }
+  }
+  
+  private func clearAllData() {
+    isProcessing = true
+    tasksViewModel.clearAllData()
+    alertMessage = "All data has been cleared."
+    showingAlert = true
+    isProcessing = false
+  }
 }
 
 #Preview {
-  SettingsView()
+  SettingsView(tasksViewModel: TasksViewModel())
 }

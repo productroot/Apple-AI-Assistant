@@ -30,7 +30,7 @@ struct TaskDetailView: View {
                             HStack {
                                 Button {
                                     task.isCompleted.toggle()
-                                    task.completedDate = task.isCompleted ? Date() : nil
+                                    task.completionDate = task.isCompleted ? Date() : nil
                                 } label: {
                                     Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                                         .font(.title2)
@@ -101,7 +101,7 @@ struct TaskDetailView: View {
                     }
                     
                     // Checklist Section
-                    if isEditing || !task.checklist.isEmpty {
+                    if isEditing || !task.checklistItems.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Text("Checklist")
@@ -109,8 +109,8 @@ struct TaskDetailView: View {
                                 
                                 Spacer()
                                 
-                                if !task.checklist.isEmpty {
-                                    Text("\(task.checklist.filter { $0.isCompleted }.count)/\(task.checklist.count)")
+                                if !task.checklistItems.isEmpty {
+                                    Text("\(task.checklistItems.filter { $0.isCompleted }.count)/\(task.checklistItems.count)")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -118,7 +118,7 @@ struct TaskDetailView: View {
                             .padding(.horizontal)
                             
                             VStack(spacing: 0) {
-                                ForEach($task.checklist) { $item in
+                                ForEach($task.checklistItems) { $item in
                                     ChecklistItemRow(item: $item, isEditing: isEditing)
                                 }
                                 
@@ -211,7 +211,7 @@ struct TaskDetailView: View {
     
     private func addChecklistItem() {
         guard !newChecklistItem.isEmpty else { return }
-        task.checklist.append(ChecklistItem(title: newChecklistItem))
+        task.checklistItems.append(ChecklistItem(title: newChecklistItem))
         newChecklistItem = ""
     }
 }

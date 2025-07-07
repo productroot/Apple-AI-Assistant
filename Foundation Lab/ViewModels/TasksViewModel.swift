@@ -21,6 +21,10 @@ final class TasksViewModel {
     var selectedTasks: Set<UUID> = []
     var isMultiSelectMode: Bool = false
     
+    private let cloudService = iCloudService.shared
+    private var isLoadingFromiCloud = false
+    private var isUpdatingFromSync = false
+    
     // MARK: - Computed Properties
     var filteredTasks: [TodoTask] {
         var filtered = tasks
@@ -54,7 +58,7 @@ final class TasksViewModel {
             if lhs.priority != rhs.priority {
                 return lhs.priority.rawValue > rhs.priority.rawValue
             }
-            return lhs.createdDate > rhs.createdDate
+            return lhs.createdAt > rhs.createdAt
         }
     }
     
@@ -72,34 +76,40 @@ final class TasksViewModel {
     
     // MARK: - Initialization
     init() {
-        loadSampleData()
+        // Always load local data first
+        loadLocalData()
+        // Don't auto-sync on startup to avoid loops
     }
     
     // MARK: - Task Management
     func addTask(_ task: TodoTask) {
         tasks.append(task)
+        saveToiCloudIfEnabled()
     }
     
     func updateTask(_ task: TodoTask) {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
             tasks[index] = task
+            saveToiCloudIfEnabled()
         }
     }
     
     func deleteTask(_ task: TodoTask) {
         tasks.removeAll { $0.id == task.id }
         selectedTasks.remove(task.id)
+        saveToiCloudIfEnabled()
     }
     
     func deleteTasks(_ taskIds: Set<UUID>) {
         tasks.removeAll { taskIds.contains($0.id) }
         selectedTasks.removeAll()
+        saveToiCloudIfEnabled()
     }
     
     func toggleTaskCompletion(_ task: TodoTask) {
         var updatedTask = task
         updatedTask.isCompleted.toggle()
-        updatedTask.completedDate = updatedTask.isCompleted ? Date() : nil
+        updatedTask.completionDate = updatedTask.isCompleted ? Date() : nil
         updateTask(updatedTask)
     }
     
@@ -124,27 +134,32 @@ final class TasksViewModel {
     // MARK: - Project Management
     func addProject(_ project: Project) {
         projects.append(project)
+        saveToiCloudIfEnabled()
     }
     
     func updateProject(_ project: Project) {
         if let index = projects.firstIndex(where: { $0.id == project.id }) {
             projects[index] = project
+            saveToiCloudIfEnabled()
         }
     }
     
     func deleteProject(_ project: Project) {
         projects.removeAll { $0.id == project.id }
         tasks.removeAll { $0.projectId == project.id }
+        saveToiCloudIfEnabled()
     }
     
     // MARK: - Area Management
     func addArea(_ area: Area) {
         areas.append(area)
+        saveToiCloudIfEnabled()
     }
     
     func updateArea(_ area: Area) {
         if let index = areas.firstIndex(where: { $0.id == area.id }) {
             areas[index] = area
+            saveToiCloudIfEnabled()
         }
     }
     
@@ -152,6 +167,7 @@ final class TasksViewModel {
         areas.removeAll { $0.id == area.id }
         tasks.removeAll { $0.areaId == area.id }
         projects.removeAll { $0.areaId == area.id }
+        saveToiCloudIfEnabled()
     }
     
     // MARK: - Private Methods
@@ -180,7 +196,7 @@ final class TasksViewModel {
         case .someday:
             return tasks.filter { !$0.isCompleted && $0.tags.contains("someday") }
         case .logbook:
-            return tasks.filter { $0.isCompleted }.sorted { ($0.completedDate ?? Date()) > ($1.completedDate ?? Date()) }
+            return tasks.filter { $0.isCompleted }.sorted { ($0.completionDate ?? Date()) > ($1.completionDate ?? Date()) }
         }
     }
     
@@ -201,8 +217,8 @@ final class TasksViewModel {
     // MARK: - Sample Data
     private func loadSampleData() {
         // Create sample areas
-        let workArea = Area(name: "Work", icon: "briefcase", color: .blue)
-        let personalArea = Area(name: "Personal", icon: "person", color: .green)
+        let workArea = Area(name: "Work", icon: "briefcase", color: "blue")
+        let personalArea = Area(name: "Personal", icon: "person", color: "green")
         areas = [workArea, personalArea]
         
         // Create sample projects
@@ -211,7 +227,7 @@ final class TasksViewModel {
             notes: "Build the new task management features",
             deadline: Date().addingTimeInterval(7 * 24 * 60 * 60),
             areaId: workArea.id,
-            color: .blue
+            color: "blue"
         )
         projects = [appProject]
         
@@ -250,5 +266,149 @@ final class TasksViewModel {
                 priority: .low
             )
         ]
+    }
+    
+    // MARK: - iCloud Sync Methods
+    private func loadFromiCloud() {
+        guard !isLoadingFromiCloud else { return }
+        isLoadingFromiCloud = true
+        
+        Task {
+            do {
+                let (fetchedTasks, fetchedProjects, fetchedAreas) = try await cloudService.fetchTasks()
+                await MainActor.run {
+                    self.isUpdatingFromSync = true
+                    self.tasks = fetchedTasks
+                    self.projects = fetchedProjects
+                    self.areas = fetchedAreas
+                    self.isLoadingFromiCloud = false
+                    self.isUpdatingFromSync = false
+                    
+                    if self.tasks.isEmpty && self.projects.isEmpty && self.areas.isEmpty {
+                        self.loadSampleData()
+                    }
+                    
+                    self.saveLocally()
+                }
+            } catch {
+                print("Failed to load from iCloud: \(error)")
+                await MainActor.run {
+                    self.isLoadingFromiCloud = false
+                    self.isUpdatingFromSync = false
+                    self.loadLocalData()
+                }
+            }
+        }
+    }
+    
+    private func loadLocalData() {
+        let decoder = JSONDecoder()
+        
+        if let tasksData = UserDefaults.standard.data(forKey: "localTasks"),
+           let decodedTasks = try? decoder.decode([TodoTask].self, from: tasksData) {
+            tasks = decodedTasks
+        }
+        
+        if let projectsData = UserDefaults.standard.data(forKey: "localProjects"),
+           let decodedProjects = try? decoder.decode([Project].self, from: projectsData) {
+            projects = decodedProjects
+        }
+        
+        if let areasData = UserDefaults.standard.data(forKey: "localAreas"),
+           let decodedAreas = try? decoder.decode([Area].self, from: areasData) {
+            areas = decodedAreas
+        }
+        
+        if tasks.isEmpty && projects.isEmpty && areas.isEmpty {
+            loadSampleData()
+        }
+    }
+    
+    private func saveLocally() {
+        let encoder = JSONEncoder()
+        
+        if let tasksData = try? encoder.encode(tasks) {
+            UserDefaults.standard.set(tasksData, forKey: "localTasks")
+        }
+        
+        if let projectsData = try? encoder.encode(projects) {
+            UserDefaults.standard.set(projectsData, forKey: "localProjects")
+        }
+        
+        if let areasData = try? encoder.encode(areas) {
+            UserDefaults.standard.set(areasData, forKey: "localAreas")
+        }
+    }
+    
+    private func saveToiCloudIfEnabled() {
+        guard !isUpdatingFromSync else { return }
+        
+        saveLocally()
+        
+        guard cloudService.iCloudEnabled else { return }
+        
+        cloudService.debouncedSaveTasks(tasks, projects: projects, areas: areas)
+    }
+    
+    func syncWithiCloud() {
+        guard cloudService.iCloudEnabled else { return }
+        loadFromiCloud()
+    }
+    
+    func exportToiCloud() async throws {
+        try await cloudService.saveTasks(tasks, projects: projects, areas: areas)
+    }
+    
+    func importFromiCloud() async throws {
+        guard !isLoadingFromiCloud else {
+            throw iCloudError.syncInProgress
+        }
+        
+        isLoadingFromiCloud = true
+        defer { isLoadingFromiCloud = false }
+        
+        do {
+            let (fetchedTasks, fetchedProjects, fetchedAreas) = try await cloudService.fetchTasks()
+            
+            await MainActor.run {
+                self.isUpdatingFromSync = true
+                
+                // Clear existing data
+                self.tasks.removeAll()
+                self.projects.removeAll()
+                self.areas.removeAll()
+                
+                // Import new data
+                self.areas = fetchedAreas
+                self.projects = fetchedProjects
+                self.tasks = fetchedTasks
+                
+                self.isUpdatingFromSync = false
+                
+                // Save to local storage
+                self.saveLocally()
+                
+                print("Import completed: \(tasks.count) tasks, \(projects.count) projects, \(areas.count) areas")
+            }
+        } catch {
+            await MainActor.run {
+                self.isUpdatingFromSync = false
+            }
+            throw error
+        }
+    }
+    
+    func clearAllData() {
+        tasks.removeAll()
+        projects.removeAll()
+        areas.removeAll()
+        selectedTasks.removeAll()
+        saveLocally()
+        
+        if cloudService.iCloudEnabled {
+            Task {
+                try? await cloudService.deleteAllData()
+            }
+        }
     }
 }

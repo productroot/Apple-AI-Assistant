@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		0A5454AB2E1148A8002C2152 /* Foundation Lab.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0A5454A72E1148A8002C2152 /* Foundation Lab.icon */; };
 		894F6A552E1B26DB0089EAEB /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 894F6A542E1B26DB0089EAEB /* CLAUDE.md */; };
-		FA43F9412E13A16E00F24BCC /* HighlightSwift in Frameworks */ = {isa = PBXBuildFile; productRef = FA43F9402E13A16E00F24BCC /* HighlightSwift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -62,7 +61,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FA43F9412E13A16E00F24BCC /* HighlightSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -134,7 +132,6 @@
 			);
 			name = "Foundation Lab";
 			packageProductDependencies = (
-				FA43F9402E13A16E00F24BCC /* HighlightSwift */,
 			);
 			productName = FoundationLab;
 			productReference = 0AAE4FFF2DF76E6600838F13 /* Foundation Lab.app */;
@@ -240,7 +237,6 @@
 			mainGroup = 0AAE4FF62DF76E6600838F13;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				FA43F93F2E13A16E00F24BCC /* XCRemoteSwiftPackageReference "HighlightSwift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0AAE50002DF76E6600838F13 /* Products */;
@@ -809,7 +805,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YQZQG7N4WG;
+				DEVELOPMENT_TEAM = 5VMX6H876T;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -852,7 +848,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YQZQG7N4WG;
+				DEVELOPMENT_TEAM = 5VMX6H876T;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -937,25 +933,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		FA43F93F2E13A16E00F24BCC /* XCRemoteSwiftPackageReference "HighlightSwift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/appstefan/HighlightSwift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.9;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		FA43F9402E13A16E00F24BCC /* HighlightSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = FA43F93F2E13A16E00F24BCC /* XCRemoteSwiftPackageReference "HighlightSwift" */;
-			productName = HighlightSwift;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0AAE4FF72DF76E6600838F13 /* Project object */;
 }
