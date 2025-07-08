@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0A5454AB2E1148A8002C2152 /* Foundation Lab.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0A5454A72E1148A8002C2152 /* Foundation Lab.icon */; };
 		894F6A552E1B26DB0089EAEB /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 894F6A542E1B26DB0089EAEB /* CLAUDE.md */; };
+		89A5097F2E1D6B58001C25E9 /* GEMINI.md in Resources */ = {isa = PBXBuildFile; fileRef = 89A5097E2E1D6B58001C25E9 /* GEMINI.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -18,6 +19,7 @@
 		0ADB46DC2E0CE81900C29293 /* Psylean.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Psylean.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0ADB48272E0D84EE00C29293 /* Murmer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Murmer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		894F6A542E1B26DB0089EAEB /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
+		89A5097E2E1D6B58001C25E9 /* GEMINI.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = GEMINI.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -92,6 +94,7 @@
 			isa = PBXGroup;
 			children = (
 				894F6A542E1B26DB0089EAEB /* CLAUDE.md */,
+				89A5097E2E1D6B58001C25E9 /* GEMINI.md */,
 				0ADB46AD2E0CE6C100C29293 /* Foundation Lab */,
 				0ABC0C9C2E09AB5300A09018 /* Physiqa */,
 				0ADB46DD2E0CE81900C29293 /* Psylean */,
@@ -257,6 +260,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0A5454AB2E1148A8002C2152 /* Foundation Lab.icon in Resources */,
+				89A5097F2E1D6B58001C25E9 /* GEMINI.md in Resources */,
 				894F6A552E1B26DB0089EAEB /* CLAUDE.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

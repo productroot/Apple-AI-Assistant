@@ -36,6 +36,16 @@ struct AreaSectionView: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
+                    
+                    Button {
+                        isCreatingProject = true
+                        newProjectName = ""
+                        newProjectAreaId = area.id
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 12)
                 .padding(.horizontal, 16)
