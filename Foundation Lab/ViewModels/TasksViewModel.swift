@@ -80,12 +80,10 @@ final class TasksViewModel {
         var groupedTasks: [Project: [TodoTask]] = [:]
 
         for task in todayTasks {
-            if let projectId = task.projectId, let project = projectMap[projectId] {
-                groupedTasks[project, default: []].append(task)
-            } else {
-                let noProject = Project(name: "No Project", notes: "", deadline: nil, areaId: nil, color: "gray")
-                groupedTasks[noProject, default: []].append(task)
+            guard let projectId = task.projectId, let project = projectMap[projectId] else {
+                continue  // Skip tasks without projects
             }
+            groupedTasks[project, default: []].append(task)
         }
 
         return groupedTasks
@@ -221,7 +219,7 @@ final class TasksViewModel {
         case .today:
             return tasks.filter { task in
                 !task.isCompleted &&
-                (task.scheduledDate != nil && task.scheduledDate! >= startOfToday && task.scheduledDate! < endOfToday)
+                (task.scheduledDate != nil && task.scheduledDate! < endOfToday)
             }
         case .upcoming:
             return tasks.filter { task in
