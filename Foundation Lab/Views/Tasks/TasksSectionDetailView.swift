@@ -14,6 +14,7 @@ struct TasksSectionDetailView: View {
     @State private var selectedTask: TodoTask?
     @State private var showingDeleteAlert = false
     @State private var showCompleted = false
+    @State private var expandedProjects: Set<UUID> = []
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -87,29 +88,137 @@ struct TasksSectionDetailView: View {
     @ViewBuilder
     private var anytimeBody: some View {
         List {
-            ForEach(viewModel.anytimeTasksByProject.keys.sorted(by: { $0.name < $1.name }), id: \.self) { project in
-                Section(header: Text(project.name).font(.headline)) {
-                    ForEach(viewModel.anytimeTasksByProject[project] ?? []) { task in
-                        TaskRowView(
-                            task: task,
-                            viewModel: viewModel,
-                            isSelected: viewModel.selectedTasks.contains(task.id),
-                            onTap: {
-                                if viewModel.isMultiSelectMode {
-                                    toggleSelection(for: task)
-                                } else {
-                                    selectedTask = task
+            if viewModel.anytimeTasksByProject.isEmpty {
+                // Empty state
+                VStack(spacing: 16) {
+                    Image(systemName: "square.stack")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.secondary)
+                    
+                    Text("No Anytime Tasks")
+                        .font(.title2)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+                    
+                    Text("All open tasks that belong to projects will appear here.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    
+                    Button {
+                        showingAddTask = true
+                    } label: {
+                        Label("Add Task", systemImage: "plus")
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+            } else {
+                ForEach(viewModel.anytimeTasksByProject.keys.sorted(by: { $0.name < $1.name }), id: \.self) { project in
+                    Section {
+                        // Project header with task count
+                        HStack {
+                            Circle()
+                                .fill(Color(project.color))
+                                .frame(width: 10, height: 10)
+                            
+                            Text(project.name)
+                                .font(.headline)
+                                .fontWeight(.medium)
+                            
+                            Spacer()
+                            
+                            let activeTasks = viewModel.anytimeTasksByProject[project]?.count ?? 0
+                            if activeTasks > 0 {
+                                Text("\(activeTasks)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color(.systemGray5))
+                                    .cornerRadius(4)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        
+                        // Active tasks
+                        ForEach(viewModel.anytimeTasksByProject[project] ?? []) { task in
+                            TaskRowView(
+                                task: task,
+                                viewModel: viewModel,
+                                isSelected: viewModel.selectedTasks.contains(task.id),
+                                onTap: {
+                                    if viewModel.isMultiSelectMode {
+                                        toggleSelection(for: task)
+                                    } else {
+                                        selectedTask = task
+                                    }
+                                }
+                            )
+                            .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 16))
+                            .onDrag {
+                                NSItemProvider(object: task.id.uuidString as NSString)
+                            }
+                        }
+                        
+                        // Completed tasks section
+                        let completedTasks = completedTasksForProject(project)
+                        if !completedTasks.isEmpty {
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    if expandedProjects.contains(project.id) {
+                                        expandedProjects.remove(project.id)
+                                    } else {
+                                        expandedProjects.insert(project.id)
+                                    }
+                                }
+                            }) {
+                                HStack {
+                                    Text(expandedProjects.contains(project.id) ? "Hide Completed" : "Show \(completedTasks.count) Completed")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                        .rotationEffect(.degrees(expandedProjects.contains(project.id) ? 90 : 0))
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 32, bottom: 4, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            
+                            if expandedProjects.contains(project.id) {
+                                ForEach(completedTasks) { task in
+                                    TaskRowView(
+                                        task: task,
+                                        viewModel: viewModel,
+                                        isSelected: false,
+                                        onTap: { selectedTask = task }
+                                    )
+                                    .listRowInsets(EdgeInsets(top: 2, leading: 32, bottom: 2, trailing: 16))
+                                    .opacity(0.7)
                                 }
                             }
-                        )
-                        .onDrag {
-                            NSItemProvider(object: task.id.uuidString as NSString)
                         }
                     }
                 }
             }
         }
         .listStyle(.insetGrouped)
+    }
+    
+    // MARK: - Helper Methods
+    private func completedTasksForProject(_ project: Project) -> [TodoTask] {
+        return viewModel.tasks.filter { $0.isCompleted && $0.projectId == project.id }
     }
 
     @ViewBuilder

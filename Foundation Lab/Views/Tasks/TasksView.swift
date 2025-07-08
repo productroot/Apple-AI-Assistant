@@ -338,7 +338,7 @@ struct TasksView: View {
         case .upcoming:
             return viewModel.upcomingTasks.count
         case .anytime:
-            return viewModel.tasks.filter { !$0.isCompleted && $0.scheduledDate == nil && $0.projectId != nil }.count
+            return viewModel.tasks.filter { !$0.isCompleted && $0.projectId != nil }.count
         case .someday:
             return viewModel.tasks.filter { !$0.isCompleted && $0.tags.contains("someday") }.count
         case .logbook:

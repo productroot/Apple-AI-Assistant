@@ -230,7 +230,7 @@ final class TasksViewModel {
                 task.scheduledDate! >= endOfToday
             }
         case .anytime:
-            return tasks.filter { !$0.isCompleted && $0.scheduledDate == nil && $0.projectId != nil }
+            return tasks.filter { !$0.isCompleted && $0.projectId != nil }
         case .someday:
             return tasks.filter { !$0.isCompleted && $0.tags.contains("someday") }
         case .logbook:
