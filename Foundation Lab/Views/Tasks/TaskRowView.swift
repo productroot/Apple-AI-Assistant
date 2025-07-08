@@ -8,12 +8,42 @@
 import SwiftUI
 
 struct TaskRowView: View {
-    let task: TodoTask
+    @State var task: TodoTask
     var viewModel: TasksViewModel
     let isSelected: Bool
     let onTap: () -> Void
-    
+
+    @State private var isEditing = false
+    @State private var editedTitle: String
+
+    init(task: TodoTask, viewModel: TasksViewModel, isSelected: Bool, onTap: @escaping () -> Void) {
+        _task = State(initialValue: task)
+        self.viewModel = viewModel
+        self.isSelected = isSelected
+        self.onTap = onTap
+        _editedTitle = State(initialValue: task.title)
+    }
+
     var body: some View {
+        HStack(spacing: 12) {
+            if isEditing {
+                editView
+            } else {
+                displayView
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 12)
+        .background(isSelected ? Color.blue.opacity(0.1) : Color.clear)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if !isEditing && !task.isCompleted {
+                isEditing = true
+            }
+        }
+    }
+
+    private var displayView: some View {
         HStack(spacing: 12) {
             // Selection indicator
             if viewModel.isMultiSelectMode {
@@ -79,12 +109,51 @@ struct TaskRowView: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding(.horizontal)
-        .padding(.vertical, 12)
-        .background(isSelected ? Color.blue.opacity(0.1) : Color.clear)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onTap()
+    }
+
+    private var editView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField("Task Title", text: $editedTitle)
+                .textFieldStyle(.plain)
+                .font(.body)
+
+            HStack(spacing: 16) {
+                // Date Picker
+                Menu {
+                    Button("Today") { task.scheduledDate = Date() }
+                    Button("Tomorrow") { task.scheduledDate = Calendar.current.date(byAdding: .day, value: 1, to: Date()) }
+                    Button("Next Week") { task.scheduledDate = Calendar.current.date(byAdding: .day, value: 7, to: Date()) }
+                    Divider()
+                    Button("No Date", role: .destructive) { task.scheduledDate = nil }
+                } label: {
+                    Image(systemName: "calendar")
+                }
+
+                // Priority Picker
+                Menu {
+                    ForEach(TodoTask.Priority.allCases, id: \.self) { priority in
+                        Button(priority.name) { task.priority = priority }
+                    }
+                } label: {
+                    Image(systemName: "flag")
+                }
+
+                Spacer()
+
+                Button("Cancel") {
+                    editedTitle = task.title
+                    isEditing = false
+                }
+                .buttonStyle(.borderless)
+
+                Button("Save") {
+                    var updatedTask = task
+                    updatedTask.title = editedTitle
+                    viewModel.updateTask(updatedTask)
+                    isEditing = false
+                }
+                .buttonStyle(.borderedProminent)
+            }
         }
     }
 }

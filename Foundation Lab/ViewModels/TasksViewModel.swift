@@ -73,6 +73,22 @@ final class TasksViewModel {
     var allTags: Set<String> {
         Set(tasks.flatMap { $0.tags })
     }
+
+    var anytimeTasksByProject: [Project: [TodoTask]] {
+        let anytimeTasks = tasksForSection(.anytime)
+        let projectMap = Dictionary(uniqueKeysWithValues: projects.map { ($0.id, $0) })
+
+        var groupedTasks: [Project: [TodoTask]] = [:]
+
+        for task in anytimeTasks {
+            guard let projectId = task.projectId, let project = projectMap[projectId] else {
+                continue
+            }
+            groupedTasks[project, default: []].append(task)
+        }
+
+        return groupedTasks
+    }
     
     // MARK: - Initialization
     init() {

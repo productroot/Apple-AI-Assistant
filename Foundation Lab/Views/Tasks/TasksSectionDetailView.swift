@@ -13,32 +13,17 @@ struct TasksSectionDetailView: View {
     @State private var showingAddTask = false
     @State private var selectedTask: TodoTask?
     @State private var showingDeleteAlert = false
+    @State private var showCompleted = false
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(filteredTasks) { task in
-                    TaskRowView(
-                        task: task,
-                        viewModel: viewModel,
-                        isSelected: viewModel.selectedTasks.contains(task.id),
-                        onTap: {
-                            if viewModel.isMultiSelectMode {
-                                toggleSelection(for: task)
-                            } else {
-                                selectedTask = task
-                            }
-                        }
-                    )
-                    .onDrag {
-                        NSItemProvider(object: task.id.uuidString as NSString)
-                    }
-                }
+        Group {
+            if case .section(let section) = filter, section == .anytime {
+                anytimeBody
+            } else {
+                defaultBody
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(Color(.systemBackground))
         .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
@@ -68,10 +53,102 @@ struct TasksSectionDetailView: View {
             }
         }
     }
+
+    @ViewBuilder
+    private var anytimeBody: some View {
+        List {
+            ForEach(viewModel.anytimeTasksByProject.keys.sorted(by: { $0.name < $1.name }), id: \.self) { project in
+                Section(header: Text(project.name).font(.headline)) {
+                    ForEach(viewModel.anytimeTasksByProject[project] ?? []) { task in
+                        TaskRowView(
+                            task: task,
+                            viewModel: viewModel,
+                            isSelected: viewModel.selectedTasks.contains(task.id),
+                            onTap: {
+                                if viewModel.isMultiSelectMode {
+                                    toggleSelection(for: task)
+                                } else {
+                                    selectedTask = task
+                                }
+                            }
+                        )
+                        .onDrag {
+                            NSItemProvider(object: task.id.uuidString as NSString)
+                        }
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+    }
+
+    @ViewBuilder
+    private var defaultBody: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(filteredTasks) { task in
+                    TaskRowView(
+                        task: task,
+                        viewModel: viewModel,
+                        isSelected: viewModel.selectedTasks.contains(task.id),
+                        onTap: {
+                            if viewModel.isMultiSelectMode {
+                                toggleSelection(for: task)
+                            } else {
+                                selectedTask = task
+                            }
+                        }
+                    )
+                    .onDrag {
+                        NSItemProvider(object: task.id.uuidString as NSString)
+                    }
+                }
+            }
+
+            if !completedTasks.isEmpty {
+                completedTasksSection
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(Color(.systemGroupedBackground))
+    }
+
+    @ViewBuilder
+    private var completedTasksSection: some View {
+        Section {
+            Button(action: { showCompleted.toggle() }) {
+                HStack {
+                    Text(showCompleted ? "Hide Completed Tasks" : "Show \(completedTasks.count) Completed Tasks")
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .rotationEffect(.degrees(showCompleted ? 90 : 0))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding()
+
+            if showCompleted {
+                ForEach(completedTasks) { task in
+                    TaskRowView(
+                        task: task,
+                        viewModel: viewModel,
+                        isSelected: false,
+                        onTap: { selectedTask = task }
+                    )
+                }
+            }
+        }
+    }
     
     private var filteredTasks: [TodoTask] {
         viewModel.selectedFilter = filter
-        return viewModel.filteredTasks
+        return viewModel.filteredTasks.filter { !$0.isCompleted }
+    }
+
+    private var completedTasks: [TodoTask] {
+        viewModel.selectedFilter = filter
+        return viewModel.filteredTasks.filter { $0.isCompleted }
     }
     
     private var navigationTitle: String {
