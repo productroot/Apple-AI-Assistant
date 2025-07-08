@@ -12,35 +12,90 @@ struct TaskRowView: View {
     var viewModel: TasksViewModel
     let isSelected: Bool
     let onTap: () -> Void
+    let onEditingChanged: ((Bool, TodoTask) -> Void)?
+    let onMoveRequested: ((TodoTask) -> Void)?
+    let onDeleteRequested: ((TodoTask) -> Void)?
+    let onDuplicateRequested: ((TodoTask) -> Void)?
+    let shouldSaveFromParent: Bool
+
 
     @State private var isEditing = false
     @State private var editedTitle: String
+    @State private var editedNotes: String
+    @State private var editedPriority: TodoTask.Priority
+    @State private var editedScheduledDate: Date?
+    @FocusState private var isTitleFocused: Bool
+    @FocusState private var isNotesFocused: Bool
 
-    init(task: TodoTask, viewModel: TasksViewModel, isSelected: Bool, onTap: @escaping () -> Void) {
+    init(
+        task: TodoTask, 
+        viewModel: TasksViewModel, 
+        isSelected: Bool, 
+        onTap: @escaping () -> Void,
+        onEditingChanged: ((Bool, TodoTask) -> Void)? = nil,
+        onMoveRequested: ((TodoTask) -> Void)? = nil,
+        onDeleteRequested: ((TodoTask) -> Void)? = nil,
+        onDuplicateRequested: ((TodoTask) -> Void)? = nil,
+        shouldSaveFromParent: Bool = false
+    ) {
         _task = State(initialValue: task)
         self.viewModel = viewModel
         self.isSelected = isSelected
         self.onTap = onTap
+        self.onEditingChanged = onEditingChanged
+        self.onMoveRequested = onMoveRequested
+        self.onDeleteRequested = onDeleteRequested
+        self.onDuplicateRequested = onDuplicateRequested
+        self.shouldSaveFromParent = shouldSaveFromParent
         _editedTitle = State(initialValue: task.title)
+        _editedNotes = State(initialValue: task.notes)
+        _editedPriority = State(initialValue: task.priority)
+        _editedScheduledDate = State(initialValue: task.scheduledDate)
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        VStack(spacing: 0) {
             if isEditing {
-                editView
+                expandedEditView
             } else {
                 displayView
             }
         }
-        .padding(.horizontal)
-        .padding(.vertical, 12)
         .background(isSelected ? Color.blue.opacity(0.1) : Color.clear)
         .contentShape(Rectangle())
         .onTapGesture {
-            if !isEditing && !task.isCompleted {
-                isEditing = true
+            if !isEditing && !task.isCompleted && !viewModel.isMultiSelectMode {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isEditing = true
+                    onEditingChanged?(true, task)
+                }
+                // Don't focus automatically - let user tap to show keyboard
+            } else if !isEditing {
+                onTap()
+            }
+            // Don't handle tap in edit mode here - let the background gesture handle it
+        }
+        .onChange(of: isTitleFocused) { oldValue, newValue in
+            // Auto-save when title field loses focus
+            if oldValue && !newValue && isEditing && !isNotesFocused {
+                saveTask()
             }
         }
+        .onChange(of: isNotesFocused) { oldValue, newValue in
+            // Auto-save when notes field loses focus
+            if oldValue && !newValue && isEditing && !isTitleFocused {
+                saveTask()
+            }
+        }
+        .onChange(of: shouldSaveFromParent) { _, newValue in
+            // When parent requests save, save and exit edit mode
+            if newValue && isEditing {
+                isTitleFocused = false
+                isNotesFocused = false
+                saveTask()
+            }
+        }
+
     }
 
     private var displayView: some View {
@@ -109,51 +164,137 @@ struct TaskRowView: View {
                     .foregroundStyle(.tertiary)
             }
         }
+        .padding(.horizontal)
+        .padding(.vertical, 12)
     }
 
-    private var editView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            TextField("Task Title", text: $editedTitle)
-                .textFieldStyle(.plain)
-                .font(.body)
-
-            HStack(spacing: 16) {
-                // Date Picker
-                Menu {
-                    Button("Today") { task.scheduledDate = Date() }
-                    Button("Tomorrow") { task.scheduledDate = Calendar.current.date(byAdding: .day, value: 1, to: Date()) }
-                    Button("Next Week") { task.scheduledDate = Calendar.current.date(byAdding: .day, value: 7, to: Date()) }
-                    Divider()
-                    Button("No Date", role: .destructive) { task.scheduledDate = nil }
-                } label: {
-                    Image(systemName: "calendar")
-                }
-
-                // Priority Picker
-                Menu {
-                    ForEach(TodoTask.Priority.allCases, id: \.self) { priority in
-                        Button(priority.name) { task.priority = priority }
+    private var expandedEditView: some View {
+                 VStack(spacing: 0) {
+             // Main editing area
+             VStack(spacing: 16) {
+                                 // Title Field
+                 TextField("Task Title", text: $editedTitle)
+                     .font(.body)
+                     .textFieldStyle(.plain)
+                     .focused($isTitleFocused)
+                     .submitLabel(.done)
+                     .onSubmit {
+                         isTitleFocused = false
+                         isNotesFocused = false
+                         saveTask()
+                     }
+                     .toolbar {
+                         ToolbarItemGroup(placement: .keyboard) {
+                             Spacer()
+                             Button("Done") {
+                                 isTitleFocused = false
+                                 isNotesFocused = false
+                                 saveTask()
+                             }
+                         }
+                     }
+                
+                                 // Notes Field
+                 TextField("Notes", text: $editedNotes, axis: .vertical)
+                     .font(.body)
+                     .textFieldStyle(.plain)
+                     .lineLimit(2...4)
+                     .focused($isNotesFocused)
+                     .onSubmit {
+                         isTitleFocused = false
+                         isNotesFocused = false
+                         saveTask()
+                     }
+                
+                // Metadata Row
+                HStack(spacing: 16) {
+                    // Priority Picker
+                    Menu {
+                        ForEach(TodoTask.Priority.allCases, id: \.self) { priority in
+                            Button {
+                                editedPriority = priority
+                            } label: {
+                                Label(priority.name, systemImage: "flag.fill")
+                                    .foregroundStyle(priority.color)
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "flag.fill")
+                                .foregroundStyle(editedPriority.color)
+                            Text(editedPriority.name)
+                                .foregroundStyle(.secondary)
+                        }
+                        .font(.caption)
                     }
-                } label: {
-                    Image(systemName: "flag")
+                    
+                    // Date Picker
+                    Menu {
+                        Button("Today") { editedScheduledDate = Date() }
+                        Button("Tomorrow") { editedScheduledDate = Calendar.current.date(byAdding: .day, value: 1, to: Date()) }
+                        Button("Next Week") { editedScheduledDate = Calendar.current.date(byAdding: .day, value: 7, to: Date()) }
+                        Divider()
+                        Button("No Date", role: .destructive) { editedScheduledDate = nil }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "calendar")
+                            Text(editedScheduledDate?.formatted(date: .abbreviated, time: .omitted) ?? "No Date")
+                                .foregroundStyle(.secondary)
+                        }
+                        .font(.caption)
+                    }
+                                         
+                     Spacer()
+                 }
+             }
+             .padding(.horizontal)
+             .padding(.vertical, 12)
+             .background(Color(.systemGray6))
+        }
+        .background(Color(.systemGray6))
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            TapGesture()
+                .onEnded { _ in
+                    // Delay the save to allow text fields to gain focus first
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        // If no text field is focused after the delay, save and exit
+                        if !isTitleFocused && !isNotesFocused {
+                            saveTask()
+                        }
+                    }
                 }
-
-                Spacer()
-
-                Button("Cancel") {
-                    editedTitle = task.title
-                    isEditing = false
-                }
-                .buttonStyle(.borderless)
-
-                Button("Save") {
-                    var updatedTask = task
-                    updatedTask.title = editedTitle
-                    viewModel.updateTask(updatedTask)
-                    isEditing = false
-                }
-                .buttonStyle(.borderedProminent)
-            }
+        )
+    }
+    
+    private func saveTask() {
+        guard !editedTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        
+        var updatedTask = task
+        updatedTask.title = editedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        updatedTask.notes = editedNotes.trimmingCharacters(in: .whitespacesAndNewlines)
+                 updatedTask.priority = editedPriority
+         updatedTask.scheduledDate = editedScheduledDate
+        
+        viewModel.updateTask(updatedTask)
+        task = updatedTask
+        
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isEditing = false
+            onEditingChanged?(false, task)
+        }
+    }
+    
+    private func duplicateTask() {
+        onDuplicateRequested?(task)
+        
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isEditing = false
+            onEditingChanged?(false, task)
         }
     }
 }

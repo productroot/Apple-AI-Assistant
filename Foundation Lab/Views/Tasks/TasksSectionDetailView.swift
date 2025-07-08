@@ -15,6 +15,10 @@ struct TasksSectionDetailView: View {
     @State private var showingDeleteAlert = false
     @State private var showCompleted = false
     @State private var expandedProjects: Set<UUID> = []
+    @State private var editingTask: TodoTask?
+    @State private var showingMoveSheet = false
+    @State private var showingDeleteTaskAlert = false
+    @State private var shouldSaveEditingTask = false
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -33,9 +37,30 @@ struct TasksSectionDetailView: View {
             toolbarContent
         }
         .overlay(alignment: .bottomTrailing) {
-            magicPlusButton
-                .padding()
+            if editingTask == nil {
+                magicPlusButton
+                    .padding()
+            }
         }
+        .overlay(alignment: .bottom) {
+            if let editingTask = editingTask {
+                TaskEditToolbar(
+                    task: editingTask,
+                    viewModel: viewModel,
+                    onMoveRequested: {
+                        showingMoveSheet = true
+                    },
+                    onDeleteRequested: {
+                        showingDeleteTaskAlert = true
+                    },
+                    onDuplicateRequested: {
+                        duplicateTask(editingTask)
+                    }
+                )
+            }
+        }
+
+
         .sheet(isPresented: $showingAddTask) {
             AddTaskView(viewModel: viewModel)
         }
@@ -55,11 +80,42 @@ struct TasksSectionDetailView: View {
                 Text("Are you sure you want to delete \"\(project.name)\"? This will also delete all tasks in this project.")
             }
         }
+        .alert("Delete Task", isPresented: $showingDeleteTaskAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                if let editingTask = editingTask {
+                    viewModel.deleteTask(editingTask)
+                    self.editingTask = nil
+                }
+            }
+        } message: {
+            if let editingTask = editingTask {
+                Text("Are you sure you want to delete \"\(editingTask.title)\"?")
+            }
+        }
+        .sheet(isPresented: $showingMoveSheet) {
+            if let editingTask = editingTask {
+                TaskMoveView(task: editingTask, viewModel: viewModel) {
+                    self.editingTask = nil
+                }
+            }
+        }
     }
 
     @ViewBuilder
     private var todayBody: some View {
-        List {
+        ZStack {
+            // Background tap area
+            if editingTask != nil {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        closeEditingMode()
+                    }
+                    .zIndex(0)
+            }
+            
+            List {
             if viewModel.todayTasksByProject.isEmpty {
                 // Empty state
                 VStack(spacing: 16) {
@@ -130,7 +186,25 @@ struct TasksSectionDetailView: View {
                                     } else {
                                         selectedTask = task
                                     }
-                                }
+                                },
+                                onEditingChanged: { isEditing, task in
+                                    editingTask = isEditing ? task : nil
+                                    if !isEditing {
+                                        shouldSaveEditingTask = false
+                                    }
+                                },
+                                onMoveRequested: { task in
+                                    editingTask = task
+                                    showingMoveSheet = true
+                                },
+                                onDeleteRequested: { task in
+                                    editingTask = task
+                                    showingDeleteTaskAlert = true
+                                },
+                                onDuplicateRequested: { task in
+                                    duplicateTask(task)
+                                },
+                                shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id
                             )
                             .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 16))
                             .onDrag {
@@ -138,8 +212,8 @@ struct TasksSectionDetailView: View {
                             }
                         }
                         
-                        // Completed tasks section
-                        let completedTasks = completedTasksForProject(project)
+                        // Completed tasks section (only tasks completed today)
+                        let completedTasks = completedTasksForProjectToday(project)
                         if !completedTasks.isEmpty {
                             Button(action: {
                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -186,11 +260,24 @@ struct TasksSectionDetailView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .zIndex(1)
+        }
     }
 
     @ViewBuilder
     private var anytimeBody: some View {
-        List {
+        ZStack {
+            // Background tap area
+            if editingTask != nil {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        closeEditingMode()
+                    }
+                    .zIndex(0)
+            }
+            
+            List {
             if viewModel.anytimeTasksByProject.isEmpty {
                 // Empty state
                 VStack(spacing: 16) {
@@ -261,7 +348,25 @@ struct TasksSectionDetailView: View {
                                     } else {
                                         selectedTask = task
                                     }
-                                }
+                                },
+                                onEditingChanged: { isEditing, task in
+                                    editingTask = isEditing ? task : nil
+                                    if !isEditing {
+                                        shouldSaveEditingTask = false
+                                    }
+                                },
+                                onMoveRequested: { task in
+                                    editingTask = task
+                                    showingMoveSheet = true
+                                },
+                                onDeleteRequested: { task in
+                                    editingTask = task
+                                    showingDeleteTaskAlert = true
+                                },
+                                onDuplicateRequested: { task in
+                                    duplicateTask(task)
+                                },
+                                shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id
                             )
                             .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 16))
                             .onDrag {
@@ -317,16 +422,43 @@ struct TasksSectionDetailView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .zIndex(1)
+        }
     }
     
     // MARK: - Helper Methods
     private func completedTasksForProject(_ project: Project) -> [TodoTask] {
         return viewModel.tasks.filter { $0.isCompleted && $0.projectId == project.id }
     }
+    
+    private func completedTasksForProjectToday(_ project: Project) -> [TodoTask] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let endOfToday = calendar.date(byAdding: .day, value: 1, to: today)!
+        
+        return viewModel.tasks.filter { task in
+            task.isCompleted && 
+            task.projectId == project.id &&
+            task.completionDate != nil &&
+            task.completionDate! >= today &&
+            task.completionDate! < endOfToday
+        }
+    }
 
     @ViewBuilder
     private var defaultBody: some View {
-        ScrollView {
+        ZStack {
+            // Background tap area
+            if editingTask != nil {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        closeEditingMode()
+                    }
+                    .zIndex(0)
+            }
+            
+            ScrollView {
             LazyVStack(spacing: 0) {
                 ForEach(filteredTasks) { task in
                     TaskRowView(
@@ -339,7 +471,25 @@ struct TasksSectionDetailView: View {
                             } else {
                                 selectedTask = task
                             }
-                        }
+                        },
+                        onEditingChanged: { isEditing, task in
+                            editingTask = isEditing ? task : nil
+                            if !isEditing {
+                                shouldSaveEditingTask = false
+                            }
+                        },
+                        onMoveRequested: { task in
+                            editingTask = task
+                            showingMoveSheet = true
+                        },
+                        onDeleteRequested: { task in
+                            editingTask = task
+                            showingDeleteTaskAlert = true
+                        },
+                        onDuplicateRequested: { task in
+                            duplicateTask(task)
+                        },
+                        shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id
                     )
                     .onDrag {
                         NSItemProvider(object: task.id.uuidString as NSString)
@@ -353,6 +503,8 @@ struct TasksSectionDetailView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Color(.systemGroupedBackground))
+        .zIndex(1)
+        }
     }
 
     @ViewBuilder
@@ -413,6 +565,38 @@ struct TasksSectionDetailView: View {
             viewModel.selectedTasks.remove(task.id)
         } else {
             viewModel.selectedTasks.insert(task.id)
+        }
+    }
+    
+    private func duplicateTask(_ task: TodoTask) {
+        let duplicatedTask = TodoTask(
+            title: "\(task.title) (Copy)",
+            notes: task.notes,
+            tags: task.tags,
+            dueDate: task.dueDate,
+            scheduledDate: task.scheduledDate,
+            projectId: task.projectId,
+            areaId: task.areaId,
+            priority: task.priority
+        )
+        
+        viewModel.addTask(duplicatedTask)
+        editingTask = nil
+    }
+    
+    private func closeEditingMode() {
+        // Dismiss keyboard first to trigger any pending saves
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        
+        // Trigger save in the currently editing task
+        shouldSaveEditingTask = true
+        
+        // Close editing mode after a brief delay to allow save to complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                editingTask = nil
+                shouldSaveEditingTask = false
+            }
         }
     }
     
