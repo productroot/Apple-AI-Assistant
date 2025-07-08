@@ -74,6 +74,23 @@ final class TasksViewModel {
         Set(tasks.flatMap { $0.tags })
     }
 
+    var todayTasksByProject: [Project: [TodoTask]] {
+        let todayTasks = tasksForSection(.today)
+        let projectMap = Dictionary(uniqueKeysWithValues: projects.map { ($0.id, $0) })
+        var groupedTasks: [Project: [TodoTask]] = [:]
+
+        for task in todayTasks {
+            if let projectId = task.projectId, let project = projectMap[projectId] {
+                groupedTasks[project, default: []].append(task)
+            } else {
+                let noProject = Project(name: "No Project", notes: "", deadline: nil, areaId: nil, color: "gray")
+                groupedTasks[noProject, default: []].append(task)
+            }
+        }
+
+        return groupedTasks
+    }
+
     var anytimeTasksByProject: [Project: [TodoTask]] {
         let anytimeTasks = tasksForSection(.anytime).filter { !$0.isCompleted }
         let projectMap = Dictionary(uniqueKeysWithValues: projects.map { ($0.id, $0) })

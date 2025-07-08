@@ -20,6 +20,8 @@ struct TasksSectionDetailView: View {
         Group {
             if case .section(let section) = filter, section == .anytime {
                 anytimeBody
+            } else if case .section(let section) = filter, section == .today {
+                todayBody
             } else {
                 defaultBody
             }
@@ -52,6 +54,34 @@ struct TasksSectionDetailView: View {
                 Text("Are you sure you want to delete \"\(project.name)\"? This will also delete all tasks in this project.")
             }
         }
+    }
+
+    @ViewBuilder
+    private var todayBody: some View {
+        List {
+            ForEach(viewModel.todayTasksByProject.keys.sorted(by: { $0.name < $1.name }), id: \.self) { project in
+                Section(header: Text(project.name).font(.headline)) {
+                    ForEach(viewModel.todayTasksByProject[project] ?? []) { task in
+                        TaskRowView(
+                            task: task,
+                            viewModel: viewModel,
+                            isSelected: viewModel.selectedTasks.contains(task.id),
+                            onTap: {
+                                if viewModel.isMultiSelectMode {
+                                    toggleSelection(for: task)
+                                } else {
+                                    selectedTask = task
+                                }
+                            }
+                        )
+                        .onDrag {
+                            NSItemProvider(object: task.id.uuidString as NSString)
+                        }
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
     }
 
     @ViewBuilder
