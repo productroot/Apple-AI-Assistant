@@ -75,7 +75,7 @@ final class TasksViewModel {
     }
 
     var anytimeTasksByProject: [Project: [TodoTask]] {
-        let anytimeTasks = tasksForSection(.anytime)
+        let anytimeTasks = tasksForSection(.anytime).filter { !$0.isCompleted }
         let projectMap = Dictionary(uniqueKeysWithValues: projects.map { ($0.id, $0) })
 
         var groupedTasks: [Project: [TodoTask]] = [:]
