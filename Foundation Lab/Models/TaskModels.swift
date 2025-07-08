@@ -143,4 +143,17 @@ enum TaskFilter: Hashable {
     case search(String)
 }
 
+// MARK: - Transferable Conformance
+extension Project: Transferable {
+    static var transferRepresentation: some TransferRepresentation {
+        ProxyRepresentation(exporting: { $0.id.uuidString })
+    }
+}
+
+extension Area: Transferable {
+    static var transferRepresentation: some TransferRepresentation {
+        ProxyRepresentation(exporting: { $0.id.uuidString })
+    }
+}
+
 

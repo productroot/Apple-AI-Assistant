@@ -351,7 +351,7 @@ final class TasksViewModel {
         UserDefaults.standard.synchronize()
     }
     
-    private func saveToiCloudIfEnabled() {
+    func saveToiCloudIfEnabled() {
         guard !isUpdatingFromSync else { return }
         
         saveLocally()

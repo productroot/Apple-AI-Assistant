@@ -31,9 +31,13 @@ struct TasksView: View {
     
     private var tasksList: some View {
         List {
-            mainSections
-            areasSection
-            orphanProjectsSection
+            if editMode == .inactive {
+                mainSections
+                areasAndProjectsSection
+            } else {
+                // In edit mode, show the editable list
+                areasAndProjectsSection
+            }
         }
         .id("\(viewModel.projects.count)-\(viewModel.areas.count)-\(viewModel.tasks.count)")
         .listStyle(.insetGrouped)
@@ -41,12 +45,12 @@ struct TasksView: View {
         .navigationDestination(for: TaskFilter.self) { filter in
             TasksSectionDetailView(viewModel: viewModel, filter: filter)
         }
-        .environment(\.editMode, $editMode)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 EditButton()
             }
         }
+        .environment(\.editMode, $editMode)
         .sheet(isPresented: $showingAddTask) {
             AddTaskView(viewModel: viewModel)
         }
@@ -112,6 +116,105 @@ struct TasksView: View {
     }
     
     @ViewBuilder
+    private var areasAndProjectsSection: some View {
+        if editMode == .active {
+            // Edit mode: simple list for areas
+            Section("Areas & Projects") {
+                ForEach(viewModel.areas) { area in
+                    HStack {
+                        Image(systemName: area.icon)
+                            .foregroundStyle(Color(area.color))
+                            .frame(width: 28)
+                        
+                        Text(area.name)
+                            .font(.body)
+                            .fontWeight(.semibold)
+                        
+                        Spacer()
+                        
+                        if areaTaskCount(for: area) > 0 {
+                            Text("\(areaTaskCount(for: area))")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
+                }
+                .onMove { from, to in
+                    viewModel.areas.move(fromOffsets: from, toOffset: to)
+                    viewModel.saveToiCloudIfEnabled()
+                }
+                .onDelete { indices in
+                    for index in indices {
+                        areaToDelete = viewModel.areas[index]
+                        showingDeleteAreaAlert = true
+                    }
+                }
+            }
+            
+            // Orphan projects in separate section
+            let orphanProjects = viewModel.projects.filter { $0.areaId == nil }
+            if !orphanProjects.isEmpty {
+                Section("Projects") {
+                    ForEach(orphanProjects) { project in
+                        HStack(spacing: 12) {
+                            Circle()
+                                .fill(Color(project.color))
+                                .frame(width: 8, height: 8)
+                            
+                            Text(project.name)
+                                .font(.body)
+                            
+                            Spacer()
+                            
+                            if project.progress > 0 {
+                                CircularProgressView(progress: project.progress)
+                                    .frame(width: 20, height: 20)
+                            }
+                            
+                            let taskCount = projectTaskCount(for: project)
+                            if taskCount > 0 {
+                                Text("\(taskCount)")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 16)
+                        .listRowInsets(EdgeInsets())
+                    }
+                    .onMove { from, to in
+                        var orphans = viewModel.projects.filter { $0.areaId == nil }
+                        orphans.move(fromOffsets: from, toOffset: to)
+                        
+                        // Update the projects array
+                        viewModel.projects = viewModel.projects.filter { $0.areaId != nil } + orphans
+                        viewModel.saveToiCloudIfEnabled()
+                    }
+                    .onDelete { indices in
+                        let orphans = viewModel.projects.filter { $0.areaId == nil }
+                        for index in indices {
+                            if index < orphans.count {
+                                projectToDelete = orphans[index]
+                                showingDeleteProjectAlert = true
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Normal mode: grouped by areas
+            Group {
+                areasSection
+                orphanProjectsSection
+            }
+        }
+    }
+    
+    @ViewBuilder
     private var areasSection: some View {
         if !viewModel.areas.isEmpty || isCreatingArea {
             if isCreatingArea {
@@ -137,12 +240,23 @@ struct TasksView: View {
                     projectToEdit: $projectToEdit,
                     projectToDelete: $projectToDelete,
                     showingDeleteProjectAlert: $showingDeleteProjectAlert,
+                    editMode: $editMode,
                     onSaveProject: { saveNewProject() },
-                    onCancelProject: { cancelProjectCreation() }
+                    onCancelProject: { cancelProjectCreation() },
+                    onNavigateToProject: { project in
+                        navigationPath.append(TaskFilter.project(project))
+                    }
                 )
             }
-            .onMove { source, destination in
-                moveAreas(from: source, to: destination)
+            .onMove { from, to in
+                viewModel.areas.move(fromOffsets: from, toOffset: to)
+                viewModel.saveToiCloudIfEnabled()
+            }
+            .onDelete { indices in
+                for index in indices {
+                    areaToDelete = viewModel.areas[index]
+                    showingDeleteAreaAlert = true
+                }
             }
         }
     }
@@ -153,13 +267,17 @@ struct TasksView: View {
             viewModel: viewModel,
             projectToEdit: $projectToEdit,
             projectToDelete: $projectToDelete,
-            showingDeleteProjectAlert: $showingDeleteProjectAlert
+            showingDeleteProjectAlert: $showingDeleteProjectAlert,
+            editMode: $editMode,
+            onNavigateToProject: { project in
+                navigationPath.append(TaskFilter.project(project))
+            }
         )
     }
     
     @ViewBuilder
     private var overlayViews: some View {
-        if !showingQuickAddOverlay {
+        if !showingQuickAddOverlay && editMode == .inactive {
             VStack {
                 Spacer()
                 HStack {
@@ -290,37 +408,5 @@ struct TasksView: View {
     
     private func deleteProject(_ project: Project) {
         viewModel.deleteProject(project)
-    }
-    
-    // MARK: - Drag & Drop Helpers
-    private func moveAreas(from source: IndexSet, to destination: Int) {
-        viewModel.areas.move(fromOffsets: source, toOffset: destination)
-        if let firstArea = viewModel.areas.first {
-            viewModel.updateArea(firstArea)
-        }
-    }
-    
-    private func moveProjects(in area: Area, from source: IndexSet, to destination: Int) {
-        var areaProjects = viewModel.projects.filter { $0.areaId == area.id }
-        areaProjects.move(fromOffsets: source, toOffset: destination)
-        
-        let otherProjects = viewModel.projects.filter { $0.areaId != area.id }
-        viewModel.projects = otherProjects + areaProjects
-        
-        if let firstProject = viewModel.projects.first {
-            viewModel.updateProject(firstProject)
-        }
-    }
-    
-    private func moveOrphanProjects(from source: IndexSet, to destination: Int) {
-        var orphanProjects = viewModel.projects.filter { $0.areaId == nil }
-        orphanProjects.move(fromOffsets: source, toOffset: destination)
-        
-        let areaProjects = viewModel.projects.filter { $0.areaId != nil }
-        viewModel.projects = areaProjects + orphanProjects
-        
-        if let firstProject = viewModel.projects.first {
-            viewModel.updateProject(firstProject)
-        }
     }
 }
