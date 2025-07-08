@@ -29,6 +29,8 @@ struct TasksSectionDetailView: View {
                 todayBody
             } else if case .section(let section) = filter, section == .upcoming {
                 upcomingBody
+            } else if case .section(let section) = filter, section == .logbook {
+                logbookBody
             } else {
                 defaultBody
             }
@@ -135,13 +137,6 @@ struct TasksSectionDetailView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
-                    
-                    Button {
-                        showingAddTask = true
-                    } label: {
-                        Label("Add Task", systemImage: "plus")
-                    }
-                    .buttonStyle(.borderedProminent)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .listRowInsets(EdgeInsets())
@@ -432,6 +427,85 @@ struct TasksSectionDetailView: View {
         UpcomingTasksView(viewModel: viewModel)
     }
     
+    private var logbookBody: some View {
+        ZStack {
+            // Background tap area
+            if editingTask != nil {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        closeEditingMode()
+                    }
+                    .zIndex(0)
+            }
+            
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(logbookTasks) { task in
+                        TaskRowView(
+                            task: task,
+                            viewModel: viewModel,
+                            isSelected: viewModel.selectedTasks.contains(task.id),
+                            onTap: {
+                                if viewModel.isMultiSelectMode {
+                                    toggleSelection(for: task)
+                                } else {
+                                    selectedTask = task
+                                }
+                            },
+                            onEditingChanged: { isEditing, task in
+                                editingTask = isEditing ? task : nil
+                                if !isEditing {
+                                    shouldSaveEditingTask = false
+                                }
+                            },
+                            onMoveRequested: { task in
+                                editingTask = task
+                                showingMoveSheet = true
+                            },
+                            onDeleteRequested: { task in
+                                editingTask = task
+                                showingDeleteTaskAlert = true
+                            },
+                            onDuplicateRequested: { task in
+                                duplicateTask(task)
+                            },
+                            shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id
+                        )
+                        .onDrag {
+                            NSItemProvider(object: task.id.uuidString as NSString)
+                        }
+                    }
+                    
+                    // Show empty state if no completed tasks
+                    if logbookTasks.isEmpty {
+                        VStack(spacing: 16) {
+                            Image(systemName: "book.closed")
+                                .font(.system(size: 48))
+                                .foregroundStyle(.secondary)
+                            
+                            Text("No Completed Tasks")
+                                .font(.title2)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.primary)
+                            
+                            Text("Completed tasks will appear here.")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 80)
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color(.systemGroupedBackground))
+            .zIndex(1)
+        }
+    }
+    
     // MARK: - Helper Methods
     private func completedTasksForProject(_ project: Project) -> [TodoTask] {
         return viewModel.tasks.filter { $0.isCompleted && $0.projectId == project.id }
@@ -549,6 +623,11 @@ struct TasksSectionDetailView: View {
     private var completedTasks: [TodoTask] {
         viewModel.selectedFilter = filter
         return viewModel.filteredTasks.filter { $0.isCompleted }
+    }
+    
+    private var logbookTasks: [TodoTask] {
+        viewModel.selectedFilter = filter
+        return viewModel.filteredTasks
     }
     
     private var navigationTitle: String {

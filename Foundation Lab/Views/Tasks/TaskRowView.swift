@@ -24,6 +24,7 @@ struct TaskRowView: View {
     @State private var editedNotes: String
     @State private var editedPriority: TodoTask.Priority
     @State private var editedScheduledDate: Date?
+    @State private var showingDatePicker = false
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
 
@@ -94,6 +95,9 @@ struct TaskRowView: View {
                 isNotesFocused = false
                 saveTask()
             }
+        }
+        .sheet(isPresented: $showingDatePicker) {
+            CustomDatePickerView(selectedDate: $editedScheduledDate)
         }
 
     }
@@ -246,6 +250,8 @@ struct TaskRowView: View {
                         Button("Tomorrow") { editedScheduledDate = Calendar.current.date(byAdding: .day, value: 1, to: Date()) }
                         Button("Next Week") { editedScheduledDate = Calendar.current.date(byAdding: .day, value: 7, to: Date()) }
                         Divider()
+                        Button("Custom...") { showingDatePicker = true }
+                        Divider()
                         Button("No Date", role: .destructive) { editedScheduledDate = nil }
                     } label: {
                         HStack(spacing: 4) {
@@ -313,5 +319,94 @@ struct TaskRowView: View {
     private func getProjectForTask(_ task: TodoTask) -> Project? {
         guard let projectId = task.projectId else { return nil }
         return viewModel.projects.first { $0.id == projectId }
+    }
+}
+
+// MARK: - Custom Date Picker View
+struct CustomDatePickerView: View {
+    @Binding var selectedDate: Date?
+    @Environment(\.dismiss) private var dismiss
+    @State private var tempDate = Date()
+    
+    init(selectedDate: Binding<Date?>) {
+        self._selectedDate = selectedDate
+        self._tempDate = State(initialValue: selectedDate.wrappedValue ?? Date())
+    }
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Quick options
+                List {
+                    Button {
+                        selectedDate = Date()
+                        dismiss()
+                    } label: {
+                        Label("Today", systemImage: "star")
+                            .foregroundStyle(.yellow)
+                    }
+                    
+                    Button {
+                        selectedDate = Calendar.current.date(byAdding: .day, value: 1, to: Date())
+                        dismiss()
+                    } label: {
+                        Label("Tomorrow", systemImage: "sun.max")
+                            .foregroundStyle(.orange)
+                    }
+                    
+                    Button {
+                        selectedDate = nextWeekend()
+                        dismiss()
+                    } label: {
+                        Label("This Weekend", systemImage: "beach.umbrella")
+                            .foregroundStyle(.blue)
+                    }
+                    
+                    Button {
+                        selectedDate = Calendar.current.date(byAdding: .day, value: 7, to: Date())
+                        dismiss()
+                    } label: {
+                        Label("Next Week", systemImage: "calendar")
+                            .foregroundStyle(.green)
+                    }
+                }
+                .listStyle(.insetGrouped)
+                .frame(maxHeight: 200)
+                
+                // Graphical date picker
+                DatePicker("Select Date", selection: $tempDate, displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    .padding()
+                
+                Spacer()
+            }
+            .navigationTitle("When")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        selectedDate = tempDate
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+    
+    private func nextWeekend() -> Date {
+        let calendar = Calendar.current
+        let today = Date()
+        let weekday = calendar.component(.weekday, from: today)
+        
+        let daysUntilSaturday = (7 - weekday + 7) % 7
+        return calendar.date(byAdding: .day, value: daysUntilSaturday == 0 ? 7 : daysUntilSaturday, to: today) ?? today
     }
 }
