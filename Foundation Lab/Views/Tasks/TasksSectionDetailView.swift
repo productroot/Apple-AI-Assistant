@@ -27,6 +27,8 @@ struct TasksSectionDetailView: View {
                 anytimeBody
             } else if case .section(let section) = filter, section == .today {
                 todayBody
+            } else if case .section(let section) = filter, section == .upcoming {
+                upcomingBody
             } else {
                 defaultBody
             }
@@ -424,6 +426,10 @@ struct TasksSectionDetailView: View {
         .listStyle(.insetGrouped)
         .zIndex(1)
         }
+    }
+    
+    private var upcomingBody: some View {
+        UpcomingTasksView(viewModel: viewModel)
     }
     
     // MARK: - Helper Methods

@@ -133,6 +133,18 @@ struct TaskRowView: View {
                             .foregroundStyle(task.priority.color)
                     }
                     
+                    if let project = getProjectForTask(task) {
+                        Label {
+                            Text(project.name)
+                        } icon: {
+                            Circle()
+                                .fill(Color(project.color))
+                                .frame(width: 6, height: 6)
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                    
                     if let scheduledDate = task.scheduledDate {
                         Label {
                             Text(scheduledDate, style: .date)
@@ -296,5 +308,10 @@ struct TaskRowView: View {
             isEditing = false
             onEditingChanged?(false, task)
         }
+    }
+    
+    private func getProjectForTask(_ task: TodoTask) -> Project? {
+        guard let projectId = task.projectId else { return nil }
+        return viewModel.projects.first { $0.id == projectId }
     }
 }
