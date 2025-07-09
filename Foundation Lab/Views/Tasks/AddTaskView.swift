@@ -36,7 +36,7 @@ struct AddTaskView: View {
                     // Priority Picker
                     Picker("Priority", selection: $priority) {
                         ForEach(TodoTask.Priority.allCases, id: \.self) { priority in
-                            Label(priority.name, systemImage: "flag.fill")
+                            Label(priority.name, systemImage: priority.icon)
                                 .foregroundStyle(priority.color)
                                 .tag(priority)
                         }

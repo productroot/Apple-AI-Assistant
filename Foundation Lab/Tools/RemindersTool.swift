@@ -42,8 +42,8 @@ struct RemindersTool: Tool {
     )
     var dueDate: String?
 
-    /// Priority level: "none", "low", "medium", "high"
-    @Guide(description: "Priority level: 'none', 'low', 'medium', 'high'")
+    /// Priority level: "none", "low", "medium", "high", "asap"
+    @Guide(description: "Priority level: 'none', 'low', 'medium', 'high', 'asap'")
     var priority: String?
 
     /// List name (defaults to default reminders list)
@@ -120,8 +120,10 @@ struct RemindersTool: Tool {
     // Set priority
     if let priorityString = arguments.priority {
       switch priorityString.lowercased() {
-      case "high":
+      case "asap":
         reminder.priority = 1
+      case "high":
+        reminder.priority = 2
       case "medium":
         reminder.priority = 5
       case "low":
@@ -316,8 +318,10 @@ struct RemindersTool: Tool {
 
     if let priorityString = arguments.priority {
       switch priorityString.lowercased() {
-      case "high":
+      case "asap":
         reminder.priority = 1
+      case "high":
+        reminder.priority = 2
       case "medium":
         reminder.priority = 5
       case "low":
@@ -421,7 +425,9 @@ struct RemindersTool: Tool {
 
   private func getPriorityString(_ priority: Int) -> String {
     switch priority {
-    case 1...3:
+    case 1:
+      return "ASAP"
+    case 2...3:
       return "High"
     case 4...6:
       return "Medium"

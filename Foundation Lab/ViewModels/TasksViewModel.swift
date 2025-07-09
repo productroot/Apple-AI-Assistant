@@ -56,7 +56,7 @@ final class TasksViewModel {
         
         return filtered.sorted { lhs, rhs in
             if lhs.priority != rhs.priority {
-                return lhs.priority.rawValue > rhs.priority.rawValue
+                return lhs.priority.sortOrder > rhs.priority.sortOrder
             }
             return lhs.createdAt > rhs.createdAt
         }

@@ -132,7 +132,7 @@ struct TaskRowView: View {
                 
                 HStack(spacing: 8) {
                     if task.priority != .none {
-                        Image(systemName: "flag.fill")
+                        Image(systemName: task.priority.icon)
                             .font(.caption2)
                             .foregroundStyle(task.priority.color)
                     }
@@ -230,13 +230,13 @@ struct TaskRowView: View {
                             Button {
                                 editedPriority = priority
                             } label: {
-                                Label(priority.name, systemImage: "flag.fill")
+                                Label(priority.name, systemImage: priority.icon)
                                     .foregroundStyle(priority.color)
                             }
                         }
                     } label: {
                         HStack(spacing: 4) {
-                            Image(systemName: "flag.fill")
+                            Image(systemName: editedPriority.icon)
                                 .foregroundStyle(editedPriority.color)
                             Text(editedPriority.name)
                                 .foregroundStyle(.secondary)

@@ -50,7 +50,7 @@ struct TaskDetailView: View {
                         // Metadata
                         HStack(spacing: 16) {
                             if task.priority != .none {
-                                Label(task.priority.name, systemImage: "flag.fill")
+                                Label(task.priority.name, systemImage: task.priority.icon)
                                     .font(.caption)
                                     .foregroundStyle(task.priority.color)
                             }

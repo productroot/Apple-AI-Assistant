@@ -31,6 +31,7 @@ struct TodoTask: Identifiable, Hashable, Codable, Sendable {
         case low = "low"
         case medium = "medium"
         case high = "high"
+        case asap = "asap"
         
         var rawValue: String {
             switch self {
@@ -38,15 +39,17 @@ struct TodoTask: Identifiable, Hashable, Codable, Sendable {
             case .low: return "low"
             case .medium: return "medium"
             case .high: return "high"
+            case .asap: return "asap"
             }
         }
         
         var color: Color {
             switch self {
             case .none: return .gray
-            case .low: return .blue
-            case .medium: return .orange
+            case .low: return .green
+            case .medium: return .yellow
             case .high: return .red
+            case .asap: return .red
             }
         }
         
@@ -56,6 +59,27 @@ struct TodoTask: Identifiable, Hashable, Codable, Sendable {
             case .low: return "Low"
             case .medium: return "Medium"
             case .high: return "High"
+            case .asap: return "ASAP"
+            }
+        }
+        
+        var icon: String {
+            switch self {
+            case .none: return "minus"
+            case .low: return "arrow.down"
+            case .medium: return "arrow.right"
+            case .high: return "arrow.up"
+            case .asap: return "exclamationmark.triangle.fill"
+            }
+        }
+        
+        var sortOrder: Int {
+            switch self {
+            case .none: return 0
+            case .low: return 1
+            case .medium: return 2
+            case .high: return 3
+            case .asap: return 4
             }
         }
     }

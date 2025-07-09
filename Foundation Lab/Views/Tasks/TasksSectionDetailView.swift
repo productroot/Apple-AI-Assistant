@@ -730,7 +730,7 @@ struct TasksSectionDetailView: View {
                             Button {
                                 // TODO: Implement priority filtering
                             } label: {
-                                Label(priority.name, systemImage: "flag.fill")
+                                Label(priority.name, systemImage: priority.icon)
                                     .foregroundStyle(priority.color)
                             }
                         }
@@ -747,7 +747,7 @@ struct TasksSectionDetailView: View {
                         Button {
                             // TODO: Implement priority filtering
                         } label: {
-                            Label(priority.name, systemImage: "flag.fill")
+                            Label(priority.name, systemImage: priority.icon)
                                 .foregroundStyle(priority.color)
                         }
                     }
