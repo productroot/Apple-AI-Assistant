@@ -140,18 +140,7 @@ struct TasksSectionDetailView: View {
 
     @ViewBuilder
     private var todayBody: some View {
-        ZStack {
-            // Background tap area
-            if editingTask != nil {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        closeEditingMode()
-                    }
-                    .zIndex(0)
-            }
-            
-            List {
+        List {
             if viewModel.todayTasksByProject.isEmpty {
                 // Empty state
                 VStack(spacing: 16) {
@@ -271,24 +260,18 @@ struct TasksSectionDetailView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .zIndex(1)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isEditingProjectName {
+                isProjectNameFieldFocused = false
+            }
+            closeEditingMode()
         }
     }
 
     @ViewBuilder
     private var anytimeBody: some View {
-        ZStack {
-            // Background tap area
-            if editingTask != nil {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        closeEditingMode()
-                    }
-                    .zIndex(0)
-            }
-            
-            List {
+        List {
             if viewModel.anytimeTasksByProject.isEmpty {
                 // Empty state
                 VStack(spacing: 16) {
@@ -415,7 +398,12 @@ struct TasksSectionDetailView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .zIndex(1)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isEditingProjectName {
+                isProjectNameFieldFocused = false
+            }
+            closeEditingMode()
         }
     }
     
@@ -424,18 +412,7 @@ struct TasksSectionDetailView: View {
     }
     
     private var logbookBody: some View {
-        ZStack {
-            // Background tap area
-            if editingTask != nil {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        closeEditingMode()
-                    }
-                    .zIndex(0)
-            }
-            
-            ScrollView {
+        ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(logbookTasks) { task in
                         TaskRowView(
@@ -498,8 +475,10 @@ struct TasksSectionDetailView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Color(.systemGroupedBackground))
-            .zIndex(1)
-        }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                closeEditingMode()
+            }
     }
     
     // MARK: - Helper Methods
@@ -523,18 +502,7 @@ struct TasksSectionDetailView: View {
 
     @ViewBuilder
     private var defaultBody: some View {
-        ZStack {
-            // Background tap area
-            if editingTask != nil {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        closeEditingMode()
-                    }
-                    .zIndex(0)
-            }
-            
-            ScrollView {
+        ScrollView {
             LazyVStack(spacing: 0) {
                 ForEach(filteredTasks) { task in
                     TaskRowView(
@@ -579,7 +547,12 @@ struct TasksSectionDetailView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Color(.systemGroupedBackground))
-        .zIndex(1)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isEditingProjectName {
+                isProjectNameFieldFocused = false
+            }
+            closeEditingMode()
         }
     }
 
@@ -666,17 +639,23 @@ struct TasksSectionDetailView: View {
     }
     
     private func closeEditingMode() {
-        // Dismiss keyboard first to trigger any pending saves
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        // Handle project name editing
+        if isEditingProjectName {
+            if case .project(let project) = filter {
+                saveProjectName(for: project)
+            }
+        }
         
         // Trigger save in the currently editing task
-        shouldSaveEditingTask = true
-        
-        // Close editing mode after a brief delay to allow save to complete
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                editingTask = nil
-                shouldSaveEditingTask = false
+        if editingTask != nil {
+            shouldSaveEditingTask = true
+            
+            // Close editing mode after a brief delay to allow save to complete
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    editingTask = nil
+                    shouldSaveEditingTask = false
+                }
             }
         }
     }

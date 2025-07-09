@@ -105,7 +105,9 @@ struct ProjectHeaderView: View {
             updatedProject.name = trimmedName
             viewModel.updateProject(updatedProject)
         }
-        isEditingName = false
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isEditingName = false
+        }
         isNameFieldFocused = false
     }
 }

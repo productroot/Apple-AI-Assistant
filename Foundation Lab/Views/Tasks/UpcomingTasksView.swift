@@ -31,48 +31,32 @@ struct UpcomingTasksView: View {
     }
     
     var body: some View {
-        ZStack {
-            // Background tap area
-            if editingTask != nil {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        closeEditingMode()
-                    }
-                    .zIndex(0)
+        Group {
+            if groupedTasks.isEmpty {
+                emptyState
+            } else {
+                tasksList
             }
-            
-            Group {
-                if groupedTasks.isEmpty {
-                    emptyState
-                } else {
-                    tasksList
-                }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            closeEditingMode()
+        }
+        .overlay(alignment: .bottomTrailing) {
+            Button(action: {
+                showingAddTask = true
+            }) {
+                Image(systemName: "plus")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .frame(width: 56, height: 56)
+                    .background(Color.blue)
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
             }
-            .zIndex(1)
-            
-            // Floating action button
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    
-                    Button(action: {
-                        showingAddTask = true
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .frame(width: 56, height: 56)
-                            .background(Color.blue)
-                            .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                    }
-                    .padding(.trailing, 24)
-                    .padding(.bottom, 24)
-                }
-            }
+            .padding(.trailing, 24)
+            .padding(.bottom, 24)
         }
         .navigationTitle("Upcoming")
         .navigationBarTitleDisplayMode(.large)
@@ -211,11 +195,16 @@ struct UpcomingTasksView: View {
     }
     
     private func closeEditingMode() {
-        if let task = editingTask {
+        // Trigger save in the currently editing task
+        if editingTask != nil {
             shouldSaveEditingTask = true
+            
+            // Close editing mode after a brief delay to allow save to complete
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                editingTask = nil
-                shouldSaveEditingTask = false
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    editingTask = nil
+                    shouldSaveEditingTask = false
+                }
             }
         }
     }

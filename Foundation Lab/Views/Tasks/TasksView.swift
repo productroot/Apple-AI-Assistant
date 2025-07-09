@@ -42,6 +42,7 @@ struct TasksView: View {
         .id("\(viewModel.projects.count)-\(viewModel.areas.count)-\(viewModel.tasks.count)")
         .listStyle(.insetGrouped)
         .navigationTitle("Tasks")
+        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: TaskFilter.self) { filter in
             TasksSectionDetailView(viewModel: viewModel, filter: filter)
         }

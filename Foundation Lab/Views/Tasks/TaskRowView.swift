@@ -273,18 +273,11 @@ struct TaskRowView: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
         .contentShape(Rectangle())
-        .simultaneousGesture(
-            TapGesture()
-                .onEnded { _ in
-                    // Delay the save to allow text fields to gain focus first
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        // If no text field is focused after the delay, save and exit
-                        if !isTitleFocused && !isNotesFocused {
-                            saveTask()
-                        }
-                    }
-                }
-        )
+        .onTapGesture {
+            if !isTitleFocused && !isNotesFocused {
+                saveTask()
+            }
+        }
     }
     
     private func saveTask() {
@@ -295,11 +288,15 @@ struct TaskRowView: View {
         var updatedTask = task
         updatedTask.title = editedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         updatedTask.notes = editedNotes.trimmingCharacters(in: .whitespacesAndNewlines)
-                 updatedTask.priority = editedPriority
-         updatedTask.scheduledDate = editedScheduledDate
+        updatedTask.priority = editedPriority
+        updatedTask.scheduledDate = editedScheduledDate
         
         viewModel.updateTask(updatedTask)
         task = updatedTask
+        
+        // Dismiss keyboard
+        isTitleFocused = false
+        isNotesFocused = false
         
         withAnimation(.easeInOut(duration: 0.3)) {
             isEditing = false
