@@ -19,6 +19,11 @@ struct TasksSectionDetailView: View {
     @State private var showingMoveSheet = false
     @State private var showingDeleteTaskAlert = false
     @State private var shouldSaveEditingTask = false
+    @State private var showingProjectDeadlineSheet = false
+    @State private var showingProjectMoveSheet = false
+    @State private var isEditingProjectName = false
+    @State private var editedProjectName = ""
+    @FocusState private var isProjectNameFieldFocused: Bool
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -35,9 +40,26 @@ struct TasksSectionDetailView: View {
                 defaultBody
             }
         }
-        .navigationTitle(navigationTitle)
+        .navigationTitle(isEditingProjectName ? "" : navigationTitle)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
+            if case .project(let project) = filter, isEditingProjectName {
+                ToolbarItem(placement: .principal) {
+                    TextField("Project name", text: $editedProjectName)
+                        .font(.headline)
+                        .fontWeight(.medium)
+                        .textFieldStyle(.plain)
+                        .focused($isProjectNameFieldFocused)
+                        .onSubmit {
+                            saveProjectName(for: project)
+                        }
+                        .onAppear {
+                            editedProjectName = project.name
+                            isProjectNameFieldFocused = true
+                        }
+                }
+            }
+            
             toolbarContent
         }
         .overlay(alignment: .bottomTrailing) {
@@ -104,6 +126,16 @@ struct TasksSectionDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingProjectDeadlineSheet) {
+            if case .project(let project) = filter {
+                ProjectDeadlineSheet(project: project, viewModel: viewModel)
+            }
+        }
+        .sheet(isPresented: $showingProjectMoveSheet) {
+            if case .project(let project) = filter {
+                ProjectMoveSheet(project: project, viewModel: viewModel)
+            }
+        }
     }
 
     @ViewBuilder
@@ -145,29 +177,11 @@ struct TasksSectionDetailView: View {
                 ForEach(viewModel.todayTasksByProject.keys.sorted(by: { $0.name < $1.name }), id: \.self) { project in
                     Section {
                         // Project header with task count
-                        HStack {
-                            Circle()
-                                .fill(Color(project.color))
-                                .frame(width: 10, height: 10)
-                            
-                            Text(project.name)
-                                .font(.headline)
-                                .fontWeight(.medium)
-                            
-                            Spacer()
-                            
-                            let activeTasks = viewModel.todayTasksByProject[project]?.count ?? 0
-                            if activeTasks > 0 {
-                                Text("\(activeTasks)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color(.systemGray5))
-                                    .cornerRadius(4)
-                            }
-                        }
-                        .padding(.vertical, 4)
+                        ProjectHeaderView(
+                            project: project,
+                            viewModel: viewModel,
+                            taskCount: viewModel.todayTasksByProject[project]?.count ?? 0
+                        )
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
                         .listRowBackground(Color.clear)
                         
@@ -307,29 +321,11 @@ struct TasksSectionDetailView: View {
                 ForEach(viewModel.anytimeTasksByProject.keys.sorted(by: { $0.name < $1.name }), id: \.self) { project in
                     Section {
                         // Project header with task count
-                        HStack {
-                            Circle()
-                                .fill(Color(project.color))
-                                .frame(width: 10, height: 10)
-                            
-                            Text(project.name)
-                                .font(.headline)
-                                .fontWeight(.medium)
-                            
-                            Spacer()
-                            
-                            let activeTasks = viewModel.anytimeTasksByProject[project]?.count ?? 0
-                            if activeTasks > 0 {
-                                Text("\(activeTasks)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color(.systemGray5))
-                                    .cornerRadius(4)
-                            }
-                        }
-                        .padding(.vertical, 4)
+                        ProjectHeaderView(
+                            project: project,
+                            viewModel: viewModel,
+                            taskCount: viewModel.anytimeTasksByProject[project]?.count ?? 0
+                        )
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
                         .listRowBackground(Color.clear)
                         
@@ -685,6 +681,22 @@ struct TasksSectionDetailView: View {
         }
     }
     
+    private func startEditingProjectName(_ project: Project) {
+        editedProjectName = project.name
+        isEditingProjectName = true
+    }
+    
+    private func saveProjectName(for project: Project) {
+        let trimmedName = editedProjectName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedName.isEmpty && trimmedName != project.name {
+            var updatedProject = project
+            updatedProject.name = trimmedName
+            viewModel.updateProject(updatedProject)
+        }
+        isEditingProjectName = false
+        isProjectNameFieldFocused = false
+    }
+    
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .primaryAction) {
@@ -697,16 +709,36 @@ struct TasksSectionDetailView: View {
         }
         
         // Combined menu for project actions and filters
-        if case .project(_) = filter {
+        if case .project(let project) = filter {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Section {
                         Button {
-                            // TODO: Edit project
+                            startEditingProjectName(project)
                         } label: {
-                            Label("Edit Project", systemImage: "pencil")
+                            Label("Edit Name", systemImage: "pencil")
                         }
                         
+                        Button {
+                            // TODO: Implement When functionality
+                        } label: {
+                            Label("When", systemImage: "calendar")
+                        }
+                        
+                        Button {
+                            showingProjectDeadlineSheet = true
+                        } label: {
+                            Label("Set Deadline", systemImage: "flag")
+                        }
+                        
+                        Button {
+                            showingProjectMoveSheet = true
+                        } label: {
+                            Label("Move", systemImage: "arrow.right")
+                        }
+                    }
+                    
+                    Section {
                         Button(role: .destructive) {
                             showingDeleteAlert = true
                         } label: {
