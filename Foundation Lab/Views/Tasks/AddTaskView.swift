@@ -58,6 +58,8 @@ struct AddTaskView: View {
                             get: { dueDate ?? scheduledDate },
                             set: { dueDate = $0 }
                         ), in: scheduledDate..., displayedComponents: .date)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(8)
                     }
                 }
                 
@@ -182,6 +184,8 @@ struct DatePickerSheet: View {
                 
                 DatePicker("Select Date", selection: $tempDate, displayedComponents: .date)
                     .datePickerStyle(.graphical)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(8)
                     .padding()
                 
                 Spacer()

@@ -172,6 +172,15 @@ struct ProjectDeadlineSheet: View {
                 if hasDeadline {
                     DatePicker("Deadline", selection: $selectedDate, displayedComponents: .date)
                         .datePickerStyle(.graphical)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(8)
+                        .padding(.vertical, 8)
+                    
+                    Button("Remove Deadline") {
+                        hasDeadline = false
+                    }
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity)
                 }
             }
             .navigationTitle("Project Deadline")

@@ -114,6 +114,15 @@ struct EditProjectView: View {
                             get: { deadline ?? Date() },
                             set: { deadline = $0 }
                         ), displayedComponents: [.date])
+                        .datePickerStyle(.graphical)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(8)
+                        
+                        Button("Remove Deadline") {
+                            hasDeadline = false
+                            deadline = nil
+                        }
+                        .foregroundColor(.red)
                     }
                 }
                 

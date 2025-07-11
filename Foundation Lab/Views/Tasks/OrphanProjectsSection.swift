@@ -16,11 +16,7 @@ struct OrphanProjectsSection: View {
         if !orphanProjects.isEmpty {
             Section("Projects") {
                 ForEach(orphanProjects) { project in
-                    Button(action: {
-                        if editMode == .inactive {
-                            onNavigateToProject?(project)
-                        }
-                    }) {
+                    NavigationLink(value: TaskFilter.project(project)) {
                         HStack(spacing: 12) {
                             let allProjectTasks = viewModel.tasks.filter { $0.projectId == project.id }
                             let openProjectTasks = allProjectTasks.filter { !$0.isCompleted }
@@ -60,7 +56,7 @@ struct OrphanProjectsSection: View {
                         .padding(.vertical, 8)
                         .padding(.horizontal, 16)
                     }
-                    .buttonStyle(.plain)
+                    .disabled(editMode == .active)
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {

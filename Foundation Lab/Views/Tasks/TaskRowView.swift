@@ -373,6 +373,8 @@ struct CustomDatePickerView: View {
                 // Graphical date picker
                 DatePicker("Select Date", selection: $tempDate, displayedComponents: .date)
                     .datePickerStyle(.graphical)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(8)
                     .padding()
                 
                 Spacer()

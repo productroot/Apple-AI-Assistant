@@ -170,27 +170,10 @@ struct SettingsView: View {
         }
         
         Section {
-          Link(destination: URL(string: "https://github.com/rudrankriyam/Foundation-Models-Framework-Example/issues")!) {
-            HStack {
-              Text("Bug/Feature Request")
-              Spacer()
-              Image(systemName: "arrow.up.right.square")
-                .foregroundColor(.secondary)
-                .font(.caption)
-            }
+          HStack {
+            Text("Made by Productroot.io Patryk Wodniak")
+            Spacer()
           }
-          .foregroundColor(.primary)
-          
-          Link(destination: URL(string: "https://x.com/rudrankriyam")!) {
-            HStack {
-              Text("Made by Rudrank Riyam")
-              Spacer()
-              Image(systemName: "arrow.up.right.square")
-                .foregroundColor(.secondary)
-                .font(.caption)
-            }
-          }
-          .foregroundColor(.primary)
           
           HStack {
             Text("Version")
@@ -200,10 +183,6 @@ struct SettingsView: View {
           }
         } header: {
           Text("About")
-        } footer: {
-          Text("Explore on-device AI with Apple's Foundation Models framework.")
-            .font(.caption)
-            .foregroundColor(.secondary)
         }
       }
       .formStyle(.grouped)

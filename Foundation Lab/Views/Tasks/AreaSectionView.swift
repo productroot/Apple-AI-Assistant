@@ -20,36 +20,40 @@ struct AreaSectionView: View {
     var body: some View {
         Section {
             // Area header
-            NavigationLink(value: TaskFilter.area(area)) {
-                HStack {
-                    Image(systemName: area.icon)
-                        .foregroundStyle(area.displayColor)
-                        .frame(width: 28)
-                    
-                    Text(area.name)
-                        .font(.body)
-                    
-                    Spacer()
-                    
-                    if areaTaskCount > 0 {
-                        Text("\(areaTaskCount)")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+            HStack {
+                NavigationLink(value: TaskFilter.area(area)) {
+                    HStack {
+                        Image(systemName: area.icon)
+                            .foregroundStyle(area.displayColor)
+                            .frame(width: 28)
+                        
+                        Text(area.name)
+                            .font(.body)
+                        
+                        Spacer()
+                        
+                        if areaTaskCount > 0 {
+                            Text("\(areaTaskCount)")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    
-                    Button {
-                        isCreatingProject = true
-                        newProjectName = ""
-                        newProjectAreaId = area.id
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
                 }
-                .padding(.vertical, 12)
-                .padding(.horizontal, 16)
+                .buttonStyle(.plain)
+                
+                Button {
+                    isCreatingProject = true
+                    newProjectName = ""
+                    newProjectAreaId = area.id
+                } label: {
+                    Image(systemName: "plus")
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 8)
+                }
+                .buttonStyle(.plain)
             }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -107,11 +111,7 @@ struct AreaSectionView: View {
             
             // Projects in this area
             ForEach(viewModel.projects.filter { $0.areaId == area.id }) { project in
-                Button(action: {
-                    if editMode == .inactive {
-                        onNavigateToProject?(project)
-                    }
-                }) {
+                NavigationLink(value: TaskFilter.project(project)) {
                     HStack(spacing: 12) {
                         let allProjectTasks = viewModel.tasks.filter { $0.projectId == project.id }
                         let openProjectTasks = allProjectTasks.filter { !$0.isCompleted }
@@ -152,7 +152,7 @@ struct AreaSectionView: View {
                     .padding(.vertical, 8)
                     .padding(.horizontal, 16)
                 }
-                .buttonStyle(.plain)
+                .disabled(editMode == .active)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
