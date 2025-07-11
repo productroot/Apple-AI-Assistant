@@ -142,7 +142,7 @@ struct TaskRowView: View {
                             Text(project.name)
                         } icon: {
                             Circle()
-                                .fill(Color(project.color))
+                                .fill(project.displayColor)
                                 .frame(width: 6, height: 6)
                         }
                         .font(.caption)

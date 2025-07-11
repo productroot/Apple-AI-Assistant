@@ -16,7 +16,7 @@ struct TaskMoveView: View {
                         } label: {
                             HStack {
                                 Circle()
-                                    .fill(Color(project.color))
+                                    .fill(project.displayColor)
                                     .frame(width: 10, height: 10)
                                 
                                 Text(project.name)
@@ -40,7 +40,7 @@ struct TaskMoveView: View {
                         } label: {
                             HStack {
                                 Image(systemName: area.icon)
-                                    .foregroundStyle(Color(area.color))
+                                    .foregroundStyle(area.displayColor)
                                 
                                 Text(area.name)
                                     .foregroundStyle(.primary)

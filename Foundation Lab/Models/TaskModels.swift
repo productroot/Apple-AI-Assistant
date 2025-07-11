@@ -152,6 +152,10 @@ struct Area: Identifiable, Hashable, Codable, Sendable {
     var projects: [Project] = []
     var tasks: [TodoTask] = []
     var createdAt: Date = Date()
+    
+    var displayColor: Color {
+        Color.projectColor(named: color)
+    }
 }
 
 // MARK: - Task Section

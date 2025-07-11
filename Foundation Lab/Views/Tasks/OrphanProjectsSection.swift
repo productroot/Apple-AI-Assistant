@@ -28,12 +28,12 @@ struct OrphanProjectsSection: View {
                             
                             ZStack {
                                 Circle()
-                                    .stroke(Color(project.color).opacity(0.3), lineWidth: 1.5)
+                                    .stroke(project.displayColor.opacity(0.3), lineWidth: 1.5)
                                     .frame(width: 16, height: 16)
                                 
                                 Circle()
                                     .trim(from: 0, to: completionProgress)
-                                    .stroke(Color(project.color), lineWidth: 1.5)
+                                    .stroke(project.displayColor, lineWidth: 1.5)
                                     .rotationEffect(.degrees(-90))
                                     .animation(.easeInOut(duration: 0.3), value: completionProgress)
                                     .frame(width: 16, height: 16)

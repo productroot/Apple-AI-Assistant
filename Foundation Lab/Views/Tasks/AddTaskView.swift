@@ -80,7 +80,7 @@ struct AddTaskView: View {
                             ForEach(viewModel.projects) { project in
                                 HStack {
                                     Circle()
-                                        .fill(Color(project.color))
+                                        .fill(project.displayColor)
                                         .frame(width: 8, height: 8)
                                     Text(project.name)
                                 }
