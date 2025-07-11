@@ -5,39 +5,32 @@ struct ProjectHeaderView: View {
     let viewModel: TasksViewModel
     let taskCount: Int
     
-    @State private var isEditingName = false
-    @State private var editedName = ""
+    @State private var showingEditNameSheet = false
     @State private var showingDeadlineSheet = false
     @State private var showingMoveSheet = false
-    @FocusState private var isNameFieldFocused: Bool
     
     var body: some View {
         HStack {
-            Circle()
-                .fill(Color(project.color))
-                .frame(width: 10, height: 10)
+            let allProjectTasks = viewModel.tasks.filter { $0.projectId == project.id }
+            let openProjectTasks = allProjectTasks.filter { !$0.isCompleted }
+            let completionProgress = allProjectTasks.isEmpty ? 0.0 : Double(allProjectTasks.count - openProjectTasks.count) / Double(allProjectTasks.count)
             
-            if isEditingName {
-                TextField("Project name", text: $editedName)
-                    .font(.headline)
-                    .fontWeight(.medium)
-                    .textFieldStyle(.plain)
-                    .focused($isNameFieldFocused)
-                    .onSubmit {
-                        saveProjectName()
-                    }
-                    .onAppear {
-                        editedName = project.name
-                        isNameFieldFocused = true
-                    }
-            } else {
-                Text(project.name)
-                    .font(.headline)
-                    .fontWeight(.medium)
-                    .onTapGesture {
-                        startEditingName()
-                    }
+            ZStack {
+                Circle()
+                    .stroke(Color(project.color).opacity(0.3), lineWidth: 1.5)
+                    .frame(width: 16, height: 16)
+                
+                Circle()
+                    .trim(from: 0, to: completionProgress)
+                    .stroke(Color(project.color), lineWidth: 1.5)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeInOut(duration: 0.3), value: completionProgress)
+                    .frame(width: 16, height: 16)
             }
+            
+            Text(project.name)
+                .font(.headline)
+                .fontWeight(.medium)
             
             Spacer()
             
@@ -53,6 +46,12 @@ struct ProjectHeaderView: View {
             
             Menu {
                 Section {
+                    Button {
+                        showingEditNameSheet = true
+                    } label: {
+                        Label("Edit Name", systemImage: "pencil")
+                    }
+                    
                     Button {
                         // TODO: Implement When functionality
                     } label: {
@@ -79,11 +78,8 @@ struct ProjectHeaderView: View {
             .menuStyle(.button)
         }
         .padding(.vertical, 4)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if isEditingName && !isNameFieldFocused {
-                saveProjectName()
-            }
+        .sheet(isPresented: $showingEditNameSheet) {
+            ProjectEditNameSheet(project: project, viewModel: viewModel)
         }
         .sheet(isPresented: $showingDeadlineSheet) {
             ProjectDeadlineSheet(project: project, viewModel: viewModel)
@@ -92,10 +88,54 @@ struct ProjectHeaderView: View {
             ProjectMoveSheet(project: project, viewModel: viewModel)
         }
     }
+}
+
+// MARK: - Project Edit Name Sheet
+struct ProjectEditNameSheet: View {
+    let project: Project
+    let viewModel: TasksViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var editedName: String
+    @FocusState private var isNameFieldFocused: Bool
     
-    private func startEditingName() {
-        editedName = project.name
-        isEditingName = true
+    init(project: Project, viewModel: TasksViewModel) {
+        self.project = project
+        self.viewModel = viewModel
+        _editedName = State(initialValue: project.name)
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Project Name") {
+                    TextField("Project name", text: $editedName)
+                        .focused($isNameFieldFocused)
+                        .onAppear {
+                            // Delay to ensure keyboard shows properly
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                                isNameFieldFocused = true
+                            }
+                        }
+                }
+            }
+            .navigationTitle("Edit Project Name")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveProjectName()
+                    }
+                    .fontWeight(.medium)
+                    .disabled(editedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
     }
     
     private func saveProjectName() {
@@ -105,10 +145,7 @@ struct ProjectHeaderView: View {
             updatedProject.name = trimmedName
             viewModel.updateProject(updatedProject)
         }
-        withAnimation(.easeInOut(duration: 0.3)) {
-            isEditingName = false
-        }
-        isNameFieldFocused = false
+        dismiss()
     }
 }
 

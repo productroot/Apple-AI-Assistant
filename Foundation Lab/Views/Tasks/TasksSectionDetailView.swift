@@ -21,9 +21,7 @@ struct TasksSectionDetailView: View {
     @State private var shouldSaveEditingTask = false
     @State private var showingProjectDeadlineSheet = false
     @State private var showingProjectMoveSheet = false
-    @State private var isEditingProjectName = false
-    @State private var editedProjectName = ""
-    @FocusState private var isProjectNameFieldFocused: Bool
+    @State private var projectToEdit: Project?
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -38,28 +36,14 @@ struct TasksSectionDetailView: View {
                 logbookBody
             } else {
                 defaultBody
+                    .onAppear {
+                        print("🔧 defaultBody appeared, filter: \(String(describing: filter))")
+                    }
             }
         }
-        .navigationTitle(isEditingProjectName ? "" : navigationTitle)
+        .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            if case .project(let project) = filter, isEditingProjectName {
-                ToolbarItem(placement: .principal) {
-                    TextField("Project name", text: $editedProjectName)
-                        .font(.headline)
-                        .fontWeight(.medium)
-                        .textFieldStyle(.plain)
-                        .focused($isProjectNameFieldFocused)
-                        .onSubmit {
-                            saveProjectName(for: project)
-                        }
-                        .onAppear {
-                            editedProjectName = project.name
-                            isProjectNameFieldFocused = true
-                        }
-                }
-            }
-            
             toolbarContent
         }
         .overlay(alignment: .bottomTrailing) {
@@ -135,6 +119,9 @@ struct TasksSectionDetailView: View {
             if case .project(let project) = filter {
                 ProjectMoveSheet(project: project, viewModel: viewModel)
             }
+        }
+        .sheet(item: $projectToEdit) { project in
+            EditProjectView(viewModel: viewModel, project: project)
         }
     }
 
@@ -308,9 +295,6 @@ struct TasksSectionDetailView: View {
         .listStyle(.insetGrouped)
         .contentShape(Rectangle())
         .onTapGesture {
-            if isEditingProjectName {
-                isProjectNameFieldFocused = false
-            }
             closeEditingMode()
         }
     }
@@ -446,9 +430,6 @@ struct TasksSectionDetailView: View {
         .listStyle(.insetGrouped)
         .contentShape(Rectangle())
         .onTapGesture {
-            if isEditingProjectName {
-                isProjectNameFieldFocused = false
-            }
             closeEditingMode()
         }
     }
@@ -595,9 +576,6 @@ struct TasksSectionDetailView: View {
         .background(Color(.systemGroupedBackground))
         .contentShape(Rectangle())
         .onTapGesture {
-            if isEditingProjectName {
-                isProjectNameFieldFocused = false
-            }
             closeEditingMode()
         }
     }
@@ -685,13 +663,6 @@ struct TasksSectionDetailView: View {
     }
     
     private func closeEditingMode() {
-        // Handle project name editing
-        if isEditingProjectName {
-            if case .project(let project) = filter {
-                saveProjectName(for: project)
-            }
-        }
-        
         // Trigger save in the currently editing task
         if editingTask != nil {
             shouldSaveEditingTask = true
@@ -706,21 +677,6 @@ struct TasksSectionDetailView: View {
         }
     }
     
-    private func startEditingProjectName(_ project: Project) {
-        editedProjectName = project.name
-        isEditingProjectName = true
-    }
-    
-    private func saveProjectName(for project: Project) {
-        let trimmedName = editedProjectName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedName.isEmpty && trimmedName != project.name {
-            var updatedProject = project
-            updatedProject.name = trimmedName
-            viewModel.updateProject(updatedProject)
-        }
-        isEditingProjectName = false
-        isProjectNameFieldFocused = false
-    }
     
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
@@ -739,9 +695,9 @@ struct TasksSectionDetailView: View {
                 Menu {
                     Section {
                         Button {
-                            startEditingProjectName(project)
+                            projectToEdit = project
                         } label: {
-                            Label("Edit Name", systemImage: "pencil")
+                            Label("Edit", systemImage: "pencil")
                         }
                         
                         Button {

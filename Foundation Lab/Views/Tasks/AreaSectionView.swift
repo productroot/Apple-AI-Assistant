@@ -192,7 +192,7 @@ struct AreaSectionView: View {
         reorderedProjects.move(fromOffsets: source, toOffset: destination)
         
         // Update the order in the main projects array
-        for (index, project) in reorderedProjects.enumerated() {
+        for (_, project) in reorderedProjects.enumerated() {
             if let globalIndex = viewModel.projects.firstIndex(where: { $0.id == project.id }) {
                 viewModel.projects[globalIndex] = project
             }
