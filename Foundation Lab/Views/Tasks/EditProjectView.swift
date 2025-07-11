@@ -12,6 +12,9 @@ struct EditProjectView: View {
     @State private var hasDeadline: Bool
     @State private var selectedColor: String
     @State private var selectedIcon: String
+    @State private var isGeneratingDescription = false
+    @State private var showGenerationError = false
+    @State private var generationError: String?
     
     private let availableColors = [
         // Primary Colors
@@ -92,8 +95,37 @@ struct EditProjectView: View {
                 Section("Project Details") {
                     TextField("Name", text: $name)
                     
-                    TextField("Notes", text: $notes, axis: .vertical)
-                        .lineLimit(3...6)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Notes")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Spacer()
+                            
+                            Button {
+                                generateDescription()
+                            } label: {
+                                HStack(spacing: 4) {
+                                    if isGeneratingDescription {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                    } else {
+                                        Image(systemName: "sparkles")
+                                    }
+                                    Text("Generate with AI")
+                                        .font(.caption)
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .disabled(isGeneratingDescription || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                        
+                        TextField("Enter project notes...", text: $notes, axis: .vertical)
+                            .lineLimit(3...10)
+                            .textFieldStyle(.roundedBorder)
+                    }
                 }
                 
                 Section("Organization") {
@@ -210,6 +242,49 @@ struct EditProjectView: View {
                         saveChanges()
                     }
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .alert("Generation Error", isPresented: $showGenerationError) {
+                Button("OK") {
+                    showGenerationError = false
+                }
+            } message: {
+                Text(generationError ?? "Failed to generate description")
+            }
+        }
+    }
+    
+    private func generateDescription() {
+        print("🎯 Starting AI description generation for project: \(name)")
+        isGeneratingDescription = true
+        generationError = nil
+        
+        Task {
+            do {
+                // Create a temporary project with current values for context
+                let tempProject = Project(
+                    id: project.id,
+                    name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                    notes: notes,
+                    deadline: hasDeadline ? deadline : nil,
+                    areaId: selectedAreaId,
+                    color: selectedColor,
+                    icon: selectedIcon
+                )
+                
+                let generatedDescription = try await viewModel.generateProjectDescription(for: tempProject)
+                
+                await MainActor.run {
+                    notes = generatedDescription
+                    isGeneratingDescription = false
+                    print("✅ Successfully applied AI-generated description")
+                }
+            } catch {
+                await MainActor.run {
+                    generationError = error.localizedDescription
+                    showGenerationError = true
+                    isGeneratingDescription = false
+                    print("❌ Failed to generate description: \(error)")
                 }
             }
         }

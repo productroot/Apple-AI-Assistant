@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import Observation
+import FoundationModels
 
 @Observable
 final class TasksViewModel {
@@ -451,6 +452,69 @@ final class TasksViewModel {
             Task {
                 try? await cloudService.deleteAllData()
             }
+        }
+    }
+    
+    // MARK: - AI Generation
+    
+    @MainActor
+    func generateProjectDescription(for project: Project) async throws -> String {
+        print("🤖 Generating AI description for project: \(project.name)")
+        
+        // Get area name if available
+        let areaName: String? = {
+            if let areaId = project.areaId,
+               let area = areas.first(where: { $0.id == areaId }) {
+                print("   Including area context: \(area.name)")
+                return area.name
+            }
+            return nil
+        }()
+        
+        if !project.notes.isEmpty {
+            print("   Including existing notes as context")
+        }
+        
+        if let deadline = project.deadline {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            print("   Including deadline: \(formatter.string(from: deadline))")
+        }
+        
+        // Use centralized prompt
+        let prompt = AIPrompts.projectDescription(
+            projectName: project.name,
+            areaName: areaName,
+            existingNotes: project.notes.isEmpty ? nil : project.notes,
+            deadline: project.deadline
+        )
+        
+        do {
+            let session = LanguageModelSession()
+            let response = try await session.respond(
+                to: Prompt(prompt),
+                generating: ProjectDescription.self
+            )
+            
+            let projectDesc = response.content
+            var formattedDescription = projectDesc.description
+            
+            if !projectDesc.objectives.isEmpty {
+                formattedDescription += "\n\nObjectives:\n"
+                formattedDescription += projectDesc.objectives.map { "• \($0)" }.joined(separator: "\n")
+            }
+            
+            if !projectDesc.expectedOutcomes.isEmpty {
+                formattedDescription += "\n\nExpected Outcomes:\n"
+                formattedDescription += projectDesc.expectedOutcomes.map { "• \($0)" }.joined(separator: "\n")
+            }
+            
+            print("✅ AI description generated successfully")
+            return formattedDescription
+            
+        } catch {
+            print("❌ Failed to generate AI description: \(error)")
+            throw error
         }
     }
 }

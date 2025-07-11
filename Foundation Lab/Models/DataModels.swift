@@ -196,3 +196,20 @@ struct BusinessIdea {
   @Guide(description: "Expected timeline or phases for launch and growth")
   let timeline: String?
 }
+
+// MARK: - Project Description Model
+
+@Generable
+struct ProjectDescription {
+  @Guide(description: "A comprehensive description of the project's purpose, goals, and scope. Should be informative and inspiring.")
+  let description: String
+  
+  @Guide(description: "Key objectives or deliverables for this project")
+  let objectives: [String]
+  
+  @Guide(description: "Expected outcomes or benefits of completing this project")
+  let expectedOutcomes: [String]
+  
+  @Guide(description: "Primary focus area or category of the project based on its area assignment")
+  let focusArea: String?
+}

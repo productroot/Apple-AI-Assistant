@@ -111,6 +111,21 @@ Tools extend AI capabilities by conforming to `Tool` protocol:
 - Type-safe generation with Generable protocol
 - Observable state management for real-time updates
 
+### AI Prompt Management
+- **All AI prompts must be centralized in `Models/AIPrompts.swift`**
+- Never hardcode prompts directly in ViewModels or Views
+- Use static methods in AIPrompts enum for different prompt types
+- Include proper documentation for each prompt method
+- Example:
+  ```swift
+  let prompt = AIPrompts.projectDescription(
+      projectName: project.name,
+      areaName: areaName,
+      existingNotes: notes,
+      deadline: deadline
+  )
+  ```
+
 ## Code Implementation Guidelines
 
 ### Avoid Mockup Functions
