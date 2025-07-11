@@ -111,6 +111,35 @@ struct Project: Identifiable, Hashable, Codable, Sendable {
         let completedTasks = tasks.filter { $0.isCompleted }.count
         return Double(completedTasks) / Double(tasks.count)
     }
+    
+    var displayColor: Color {
+        Color.projectColor(named: color)
+    }
+}
+
+// MARK: - Color Extension
+extension Color {
+    static func projectColor(named colorName: String) -> Color {
+        switch colorName {
+        case "systemRed": return Color(.systemRed)
+        case "systemOrange": return Color(.systemOrange)
+        case "systemYellow": return Color(.systemYellow)
+        case "systemGreen": return Color(.systemGreen)
+        case "systemTeal": return Color(.systemTeal)
+        case "systemBlue": return Color(.systemBlue)
+        case "systemIndigo": return Color(.systemIndigo)
+        case "systemPurple": return Color(.systemPurple)
+        case "systemPink": return Color(.systemPink)
+        case "systemBrown": return Color(.systemBrown)
+        case "systemGray": return Color(.systemGray)
+        case "systemGray2": return Color(.systemGray2)
+        case "systemGray3": return Color(.systemGray3)
+        case "systemGray4": return Color(.systemGray4)
+        case "systemGray5": return Color(.systemGray5)
+        case "systemGray6": return Color(.systemGray6)
+        default: return Color(colorName)
+        }
+    }
 }
 
 
