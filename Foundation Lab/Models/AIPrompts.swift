@@ -49,9 +49,43 @@ enum AIPrompts {
         return prompt
     }
     
+    // MARK: - Task Checklist Generation
+    
+    /// Generates a prompt for creating task checklist items
+    /// - Parameters:
+    ///   - taskTitle: The title of the task
+    ///   - taskNotes: Optional task description/notes
+    ///   - projectName: Optional project name the task belongs to
+    ///   - areaName: Optional area name from the project
+    /// - Returns: A formatted prompt string
+    static func taskChecklist(
+        taskTitle: String,
+        taskNotes: String? = nil,
+        projectName: String? = nil,
+        areaName: String? = nil
+    ) -> String {
+        var prompt = "Generate a comprehensive checklist for the task: '\(taskTitle)'."
+        
+        // Add project context if available
+        if let projectName = projectName {
+            prompt += " This task is part of the '\(projectName)' project."
+        }
+        
+        // Add area context if available
+        if let areaName = areaName {
+            prompt += " The project belongs to the '\(areaName)' area."
+        }
+        
+        // Add task notes as context if available
+        if let taskNotes = taskNotes, !taskNotes.isEmpty {
+            prompt += " Task description: \(taskNotes)"
+        }
+        
+        prompt += " Create specific, actionable checklist items that break down this task into manageable steps. Each item should be clear and achievable. Consider the context and provide items that are relevant to the task's domain."
+        
+        return prompt
+    }
+    
     // MARK: - Future Prompts
     // Add more prompt generation methods here as new AI features are added
-    // Example:
-    // static func taskPrioritization(tasks: [TodoTask]) -> String { ... }
-    // static func areaRecommendation(projectName: String) -> String { ... }
 }

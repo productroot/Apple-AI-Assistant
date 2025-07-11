@@ -517,4 +517,66 @@ final class TasksViewModel {
             throw error
         }
     }
+    
+    @MainActor
+    func generateTaskChecklist(for task: TodoTask) async throws -> [ChecklistItem] {
+        print("🤖 Generating AI checklist for task: \(task.title)")
+        
+        // Get project and area context
+        var projectName: String?
+        var areaName: String?
+        
+        if let projectId = task.projectId,
+           let project = projects.first(where: { $0.id == projectId }) {
+            projectName = project.name
+            print("   Including project context: \(project.name)")
+            
+            if let areaId = project.areaId,
+               let area = areas.first(where: { $0.id == areaId }) {
+                areaName = area.name
+                print("   Including area context: \(area.name)")
+            }
+        }
+        
+        if !task.notes.isEmpty {
+            print("   Including task notes as context")
+        }
+        
+        // Use centralized prompt
+        let prompt = AIPrompts.taskChecklist(
+            taskTitle: task.title,
+            taskNotes: task.notes.isEmpty ? nil : task.notes,
+            projectName: projectName,
+            areaName: areaName
+        )
+        
+        do {
+            let session = LanguageModelSession()
+            let response = try await session.respond(
+                to: Prompt(prompt),
+                generating: TaskChecklist.self
+            )
+            
+            let taskChecklist = response.content
+            
+            // Convert strings to ChecklistItem objects
+            let checklistItems = taskChecklist.items.map { itemTitle in
+                ChecklistItem(title: itemTitle)
+            }
+            
+            print("✅ AI checklist generated successfully with \(checklistItems.count) items")
+            if let estimatedMinutes = taskChecklist.estimatedTotalMinutes {
+                print("   Estimated time: \(estimatedMinutes) minutes")
+            }
+            if let order = taskChecklist.completionOrder {
+                print("   Completion order: \(order)")
+            }
+            
+            return checklistItems
+            
+        } catch {
+            print("❌ Failed to generate AI checklist: \(error)")
+            throw error
+        }
+    }
 }

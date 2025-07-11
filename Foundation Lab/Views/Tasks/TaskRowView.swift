@@ -25,8 +25,13 @@ struct TaskRowView: View {
     @State private var editedPriority: TodoTask.Priority
     @State private var editedScheduledDate: Date?
     @State private var showingDatePicker = false
+    @State private var isGeneratingChecklist = false
+    @State private var showGenerationError = false
+    @State private var generationError: String?
+    @State private var newChecklistItem = ""
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
+    @FocusState private var isNewChecklistItemFocused: Bool
 
     init(
         task: TodoTask, 
@@ -98,6 +103,13 @@ struct TaskRowView: View {
         }
         .sheet(isPresented: $showingDatePicker) {
             CustomDatePickerView(selectedDate: $editedScheduledDate)
+        }
+        .alert("Generation Error", isPresented: $showGenerationError) {
+            Button("OK") {
+                showGenerationError = false
+            }
+        } message: {
+            Text(generationError ?? "Failed to generate checklist")
         }
 
     }
@@ -264,6 +276,83 @@ struct TaskRowView: View {
                                          
                      Spacer()
                  }
+                
+                // Checklist Section
+                if !task.checklistItems.isEmpty || isGeneratingChecklist {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Label("Checklist", systemImage: "checklist")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            
+                            if !task.checklistItems.isEmpty {
+                                Text("\(task.checklistItems.filter { $0.isCompleted }.count)/\(task.checklistItems.count)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            
+                            Spacer()
+                        }
+                        
+                        // Checklist items
+                        ForEach(task.checklistItems) { item in
+                            HStack(spacing: 8) {
+                                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                                    .font(.caption)
+                                    .foregroundStyle(item.isCompleted ? .green : .secondary)
+                                    .onTapGesture {
+                                        if let index = task.checklistItems.firstIndex(where: { $0.id == item.id }) {
+                                            task.checklistItems[index].isCompleted.toggle()
+                                        }
+                                    }
+                                
+                                Text(item.title)
+                                    .font(.caption)
+                                    .strikethrough(item.isCompleted)
+                                    .foregroundStyle(item.isCompleted ? .secondary : .primary)
+                                
+                                Spacer()
+                            }
+                        }
+                        
+                        // Add new item field
+                        HStack(spacing: 8) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                            
+                            TextField("Add checklist item", text: $newChecklistItem)
+                                .font(.caption)
+                                .textFieldStyle(.plain)
+                                .focused($isNewChecklistItemFocused)
+                                .onSubmit {
+                                    addChecklistItem()
+                                }
+                        }
+                    }
+                }
+                
+                // AI Generate Checklist Button
+                Button {
+                    generateChecklist()
+                } label: {
+                    HStack(spacing: 6) {
+                        if isGeneratingChecklist {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "sparkles")
+                        }
+                        Text(task.checklistItems.isEmpty ? "Generate Checklist" : "Add More Items")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.blue)
+                    .cornerRadius(8)
+                }
+                .disabled(isGeneratingChecklist)
              }
              .padding(.horizontal)
              .padding(.vertical, 12)
@@ -290,6 +379,7 @@ struct TaskRowView: View {
         updatedTask.notes = editedNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         updatedTask.priority = editedPriority
         updatedTask.scheduledDate = editedScheduledDate
+        updatedTask.checklistItems = task.checklistItems // Save updated checklist items
         
         viewModel.updateTask(updatedTask)
         task = updatedTask
@@ -297,6 +387,7 @@ struct TaskRowView: View {
         // Dismiss keyboard
         isTitleFocused = false
         isNotesFocused = false
+        isNewChecklistItemFocused = false
         
         withAnimation(.easeInOut(duration: 0.3)) {
             isEditing = false
@@ -316,6 +407,38 @@ struct TaskRowView: View {
     private func getProjectForTask(_ task: TodoTask) -> Project? {
         guard let projectId = task.projectId else { return nil }
         return viewModel.projects.first { $0.id == projectId }
+    }
+    
+    private func addChecklistItem() {
+        guard !newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        task.checklistItems.append(ChecklistItem(title: newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines)))
+        newChecklistItem = ""
+    }
+    
+    private func generateChecklist() {
+        print("🎯 Starting AI checklist generation for task: \(task.title)")
+        isGeneratingChecklist = true
+        generationError = nil
+        
+        Task {
+            do {
+                let generatedItems = try await viewModel.generateTaskChecklist(for: task)
+                
+                await MainActor.run {
+                    // Append generated items to existing checklist
+                    task.checklistItems.append(contentsOf: generatedItems)
+                    isGeneratingChecklist = false
+                    print("✅ Successfully added \(generatedItems.count) AI-generated checklist items")
+                }
+            } catch {
+                await MainActor.run {
+                    generationError = error.localizedDescription
+                    showGenerationError = true
+                    isGeneratingChecklist = false
+                    print("❌ Failed to generate checklist: \(error)")
+                }
+            }
+        }
     }
 }
 

@@ -15,6 +15,9 @@ struct TaskDetailView: View {
     @State private var isEditing = false
     @State private var showDeleteConfirmation = false
     @State private var newChecklistItem = ""
+    @State private var isGeneratingChecklist = false
+    @State private var showGenerationError = false
+    @State private var generationError: String?
     
     var body: some View {
         NavigationStack {
@@ -109,6 +112,26 @@ struct TaskDetailView: View {
                                 
                                 Spacer()
                                 
+                                if isEditing {
+                                    Button {
+                                        generateChecklist()
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            if isGeneratingChecklist {
+                                                ProgressView()
+                                                    .scaleEffect(0.8)
+                                            } else {
+                                                Image(systemName: "sparkles")
+                                            }
+                                            Text("Generate")
+                                                .font(.caption)
+                                        }
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                    .disabled(isGeneratingChecklist)
+                                }
+                                
                                 if !task.checklistItems.isEmpty {
                                     Text("\(task.checklistItems.filter { $0.isCompleted }.count)/\(task.checklistItems.count)")
                                         .font(.caption)
@@ -119,7 +142,9 @@ struct TaskDetailView: View {
                             
                             VStack(spacing: 0) {
                                 ForEach($task.checklistItems) { $item in
-                                    ChecklistItemRow(item: $item, isEditing: isEditing)
+                                    ChecklistItemRow(item: $item, isEditing: isEditing, onDelete: {
+                                        task.checklistItems.removeAll { $0.id == item.id }
+                                    })
                                 }
                                 
                                 if isEditing {
@@ -206,6 +231,13 @@ struct TaskDetailView: View {
             } message: {
                 Text("This action cannot be undone.")
             }
+            .alert("Generation Error", isPresented: $showGenerationError) {
+                Button("OK") {
+                    showGenerationError = false
+                }
+            } message: {
+                Text(generationError ?? "Failed to generate checklist")
+            }
         }
     }
     
@@ -214,12 +246,45 @@ struct TaskDetailView: View {
         task.checklistItems.append(ChecklistItem(title: newChecklistItem))
         newChecklistItem = ""
     }
+    
+    private func generateChecklist() {
+        print("🎯 Starting AI checklist generation for task: \(task.title)")
+        isGeneratingChecklist = true
+        generationError = nil
+        
+        Task {
+            do {
+                let generatedItems = try await viewModel.generateTaskChecklist(for: task)
+                
+                await MainActor.run {
+                    // Append generated items to existing checklist
+                    task.checklistItems.append(contentsOf: generatedItems)
+                    isGeneratingChecklist = false
+                    print("✅ Successfully added \(generatedItems.count) AI-generated checklist items")
+                }
+            } catch {
+                await MainActor.run {
+                    generationError = error.localizedDescription
+                    showGenerationError = true
+                    isGeneratingChecklist = false
+                    print("❌ Failed to generate checklist: \(error)")
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Checklist Item Row
 struct ChecklistItemRow: View {
     @Binding var item: ChecklistItem
     let isEditing: Bool
+    let onDelete: (() -> Void)?
+    
+    init(item: Binding<ChecklistItem>, isEditing: Bool, onDelete: (() -> Void)? = nil) {
+        self._item = item
+        self.isEditing = isEditing
+        self.onDelete = onDelete
+    }
     
     var body: some View {
         HStack {
@@ -240,6 +305,16 @@ struct ChecklistItemRow: View {
             }
             
             Spacer()
+            
+            if isEditing, let onDelete = onDelete {
+                Button {
+                    onDelete()
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundStyle(.red)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(.horizontal)
         .padding(.vertical, 8)

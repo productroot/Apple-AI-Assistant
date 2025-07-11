@@ -213,3 +213,17 @@ struct ProjectDescription {
   @Guide(description: "Primary focus area or category of the project based on its area assignment")
   let focusArea: String?
 }
+
+// MARK: - Task Checklist Model
+
+@Generable
+struct TaskChecklist {
+  @Guide(description: "A list of actionable checklist items for completing the task. Each item should be specific, clear, and achievable.")
+  let items: [String]
+  
+  @Guide(description: "Estimated time in minutes for completing all checklist items")
+  let estimatedTotalMinutes: Int?
+  
+  @Guide(description: "Suggested order of completion: 'sequential' if items should be done in order, 'parallel' if they can be done in any order")
+  let completionOrder: String?
+}
