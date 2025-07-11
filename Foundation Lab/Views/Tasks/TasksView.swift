@@ -162,9 +162,22 @@ struct TasksView: View {
                 Section("Projects") {
                     ForEach(orphanProjects) { project in
                         HStack(spacing: 12) {
-                            Circle()
-                                .fill(Color(project.color))
-                                .frame(width: 8, height: 8)
+                            let allProjectTasks = viewModel.tasks.filter { $0.projectId == project.id }
+                            let openProjectTasks = allProjectTasks.filter { !$0.isCompleted }
+                            let completionProgress = allProjectTasks.isEmpty ? 0.0 : Double(allProjectTasks.count - openProjectTasks.count) / Double(allProjectTasks.count)
+                            
+                            ZStack {
+                                Circle()
+                                    .stroke(Color(project.color).opacity(0.3), lineWidth: 1.5)
+                                    .frame(width: 16, height: 16)
+                                
+                                Circle()
+                                    .trim(from: 0, to: completionProgress)
+                                    .stroke(Color(project.color), lineWidth: 1.5)
+                                    .rotationEffect(.degrees(-90))
+                                    .animation(.easeInOut(duration: 0.3), value: completionProgress)
+                                    .frame(width: 16, height: 16)
+                            }
                             
                             Text(project.name)
                                 .font(.body)
@@ -176,7 +189,7 @@ struct TasksView: View {
                                     .frame(width: 20, height: 20)
                             }
                             
-                            let taskCount = projectTaskCount(for: project)
+                            let taskCount = openProjectTasks.count
                             if taskCount > 0 {
                                 Text("\(taskCount)")
                                     .font(.footnote)
