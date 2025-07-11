@@ -141,7 +141,10 @@ struct TasksSectionDetailView: View {
     @ViewBuilder
     private var todayBody: some View {
         List {
-            if viewModel.todayTasksByProject.isEmpty {
+            let todayTasks = viewModel.todayTasks
+            let tasksWithoutProject = todayTasks.filter { $0.projectId == nil }
+            
+            if todayTasks.isEmpty {
                 // Empty state
                 VStack(spacing: 16) {
                     Image(systemName: "calendar")
@@ -163,6 +166,49 @@ struct TasksSectionDetailView: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             } else {
+                // Tasks without projects
+                if !tasksWithoutProject.isEmpty {
+                    Section {
+                        ForEach(tasksWithoutProject) { task in
+                            TaskRowView(
+                                task: task,
+                                viewModel: viewModel,
+                                isSelected: viewModel.selectedTasks.contains(task.id),
+                                onTap: {
+                                    if viewModel.isMultiSelectMode {
+                                        toggleSelection(for: task)
+                                    } else {
+                                        selectedTask = task
+                                    }
+                                },
+                                onEditingChanged: { isEditing, task in
+                                    editingTask = isEditing ? task : nil
+                                    if !isEditing {
+                                        shouldSaveEditingTask = false
+                                    }
+                                },
+                                onMoveRequested: { task in
+                                    editingTask = task
+                                    showingMoveSheet = true
+                                },
+                                onDeleteRequested: { task in
+                                    editingTask = task
+                                    showingDeleteTaskAlert = true
+                                },
+                                onDuplicateRequested: { task in
+                                    duplicateTask(task)
+                                },
+                                shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id
+                            )
+                            .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 16))
+                            .onDrag {
+                                NSItemProvider(object: task.id.uuidString as NSString)
+                            }
+                        }
+                    }
+                }
+                
+                // Tasks grouped by project
                 ForEach(viewModel.todayTasksByProject.keys.sorted(by: { $0.name < $1.name }), id: \.self) { project in
                     Section {
                         // Project header with task count
