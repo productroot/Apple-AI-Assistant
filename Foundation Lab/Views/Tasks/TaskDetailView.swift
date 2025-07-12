@@ -103,6 +103,61 @@ struct TaskDetailView: View {
                         }
                     }
                     
+                    // Recurrence Section
+                    if isEditing || task.recurrenceRule != nil {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Repeat")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            if isEditing {
+                                Menu {
+                                    Button("None") {
+                                        task.recurrenceRule = nil
+                                        task.customRecurrence = nil
+                                    }
+                                    
+                                    Divider()
+                                    
+                                    ForEach(RecurrenceRule.allCases.filter { $0 != .custom }, id: \.self) { rule in
+                                        Button {
+                                            task.recurrenceRule = rule
+                                            task.customRecurrence = nil
+                                        } label: {
+                                            Label(rule.displayName, systemImage: rule.icon)
+                                        }
+                                    }
+                                } label: {
+                                    HStack {
+                                        Label {
+                                            Text(task.recurrenceRule?.displayName ?? "None")
+                                        } icon: {
+                                            Image(systemName: task.recurrenceRule?.icon ?? "arrow.clockwise")
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                    .padding()
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(8)
+                                }
+                                .padding(.horizontal)
+                            } else if let recurrenceRule = task.recurrenceRule {
+                                Label {
+                                    Text("Repeats \(recurrenceRule.displayName)")
+                                } icon: {
+                                    Image(systemName: recurrenceRule.icon)
+                                }
+                                .padding(.horizontal)
+                                .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    
                     // Checklist Section
                     if isEditing || !task.checklistItems.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {

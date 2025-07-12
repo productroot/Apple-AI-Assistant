@@ -29,6 +29,9 @@ struct TaskRowView: View {
     @State private var showGenerationError = false
     @State private var generationError: String?
     @State private var newChecklistItem = ""
+    @State private var editedRecurrenceRule: RecurrenceRule?
+    @State private var editedCustomRecurrence: CustomRecurrence?
+    @State private var showingCustomRecurrence = false
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
     @FocusState private var isNewChecklistItemFocused: Bool
@@ -57,6 +60,8 @@ struct TaskRowView: View {
         _editedNotes = State(initialValue: task.notes)
         _editedPriority = State(initialValue: task.priority)
         _editedScheduledDate = State(initialValue: task.scheduledDate)
+        _editedRecurrenceRule = State(initialValue: task.recurrenceRule)
+        _editedCustomRecurrence = State(initialValue: task.customRecurrence)
     }
 
     var body: some View {
@@ -111,7 +116,34 @@ struct TaskRowView: View {
         } message: {
             Text(generationError ?? "Failed to generate checklist")
         }
+        .sheet(isPresented: $showingCustomRecurrence) {
+            CustomRecurrenceView(
+                customRecurrence: $editedCustomRecurrence,
+                isPresented: $showingCustomRecurrence
+            )
+            .onDisappear {
+                // If custom recurrence was set, update the rule
+                if editedCustomRecurrence != nil {
+                    editedRecurrenceRule = .custom
+                }
+            }
+        }
 
+    }
+    
+    private var recurrenceDisplayText: String {
+        if editedRecurrenceRule == .custom, let custom = editedCustomRecurrence {
+            // Generate custom recurrence description
+            var text = "Every "
+            if custom.interval == 1 {
+                text += "\(custom.unit.rawValue)"
+            } else {
+                text += "\(custom.interval) \(custom.unit.rawValue)s"
+            }
+            return text
+        } else {
+            return editedRecurrenceRule?.displayName ?? "Repeat"
+        }
     }
 
     private var displayView: some View {
@@ -169,6 +201,16 @@ struct TaskRowView: View {
                         }
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    }
+                    
+                    if task.recurrenceRule != nil {
+                        Label {
+                            Text(task.recurrenceRule?.displayName ?? "Repeating")
+                        } icon: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.purple)
                     }
                     
                     if !task.tags.isEmpty {
@@ -269,6 +311,41 @@ struct TaskRowView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "calendar")
                             Text(editedScheduledDate?.formatted(date: .abbreviated, time: .omitted) ?? "No Date")
+                                .foregroundStyle(.secondary)
+                        }
+                        .font(.caption)
+                    }
+                    
+                    // Recurrence Picker
+                    Menu {
+                        Button("None") {
+                            editedRecurrenceRule = nil
+                            editedCustomRecurrence = nil
+                        }
+                        
+                        Divider()
+                        
+                        ForEach(RecurrenceRule.allCases.filter { $0 != .custom }, id: \.self) { rule in
+                            Button {
+                                editedRecurrenceRule = rule
+                                editedCustomRecurrence = nil
+                            } label: {
+                                Label(rule.displayName, systemImage: rule.icon)
+                            }
+                        }
+                        
+                        Divider()
+                        
+                        Button {
+                            showingCustomRecurrence = true
+                        } label: {
+                            Label("Custom...", systemImage: "gearshape")
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: editedRecurrenceRule?.icon ?? "arrow.clockwise")
+                                .foregroundStyle(editedRecurrenceRule != nil ? .purple : .secondary)
+                            Text(recurrenceDisplayText)
                                 .foregroundStyle(.secondary)
                         }
                         .font(.caption)
@@ -380,6 +457,13 @@ struct TaskRowView: View {
         updatedTask.priority = editedPriority
         updatedTask.scheduledDate = editedScheduledDate
         updatedTask.checklistItems = task.checklistItems // Save updated checklist items
+        updatedTask.recurrenceRule = editedRecurrenceRule
+        updatedTask.customRecurrence = editedCustomRecurrence
+        
+        // Clear custom recurrence if not using custom rule
+        if editedRecurrenceRule != .custom {
+            updatedTask.customRecurrence = nil
+        }
         
         viewModel.updateTask(updatedTask)
         task = updatedTask

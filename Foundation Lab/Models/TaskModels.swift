@@ -9,6 +9,106 @@ import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
 
+// MARK: - Recurrence Rule
+enum RecurrenceRule: String, CaseIterable, Codable, Sendable {
+    case daily = "daily"
+    case weekly = "weekly"
+    case biweekly = "biweekly"
+    case monthly = "monthly"
+    case yearly = "yearly"
+    case weekdays = "weekdays"
+    case weekends = "weekends"
+    case custom = "custom"
+    
+    var displayName: String {
+        switch self {
+        case .daily: return "Daily"
+        case .weekly: return "Weekly"
+        case .biweekly: return "Every 2 Weeks"
+        case .monthly: return "Monthly"
+        case .yearly: return "Yearly"
+        case .weekdays: return "Weekdays"
+        case .weekends: return "Weekends"
+        case .custom: return "Custom"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .daily: return "calendar.day.timeline.left"
+        case .weekly: return "calendar.badge.clock"
+        case .biweekly: return "calendar.badge.2"
+        case .monthly: return "calendar.circle"
+        case .yearly: return "calendar.badge.exclamationmark"
+        case .weekdays: return "briefcase"
+        case .weekends: return "beach.umbrella"
+        case .custom: return "gearshape"
+        }
+    }
+    
+    func nextOccurrence(from date: Date) -> Date? {
+        let calendar = Calendar.current
+        switch self {
+        case .daily:
+            return calendar.date(byAdding: .day, value: 1, to: date)
+        case .weekly:
+            return calendar.date(byAdding: .weekOfYear, value: 1, to: date)
+        case .biweekly:
+            return calendar.date(byAdding: .weekOfYear, value: 2, to: date)
+        case .monthly:
+            return calendar.date(byAdding: .month, value: 1, to: date)
+        case .yearly:
+            return calendar.date(byAdding: .year, value: 1, to: date)
+        case .weekdays:
+            var nextDate = calendar.date(byAdding: .day, value: 1, to: date)!
+            while calendar.isDateInWeekend(nextDate) {
+                nextDate = calendar.date(byAdding: .day, value: 1, to: nextDate)!
+            }
+            return nextDate
+        case .weekends:
+            var nextDate = calendar.date(byAdding: .day, value: 1, to: date)!
+            while !calendar.isDateInWeekend(nextDate) {
+                nextDate = calendar.date(byAdding: .day, value: 1, to: nextDate)!
+            }
+            return nextDate
+        case .custom:
+            return nil
+        }
+    }
+}
+
+// MARK: - Custom Recurrence
+struct CustomRecurrence: Codable, Hashable, Sendable {
+    enum TimeUnit: String, Codable, CaseIterable {
+        case day = "day"
+        case week = "week"
+        case month = "month"
+        case year = "year"
+        
+        var calendarComponent: Calendar.Component {
+            switch self {
+            case .day: return .day
+            case .week: return .weekOfYear
+            case .month: return .month
+            case .year: return .year
+            }
+        }
+    }
+    
+    enum MonthlyOption: String, Codable {
+        case sameDay = "sameDay" // e.g., every 15th
+        case lastDay = "lastDay" // last day of month
+    }
+    
+    var interval: Int
+    var unit: TimeUnit
+    var selectedDays: Set<Int>? // For weekly recurrence (0 = Sunday, 6 = Saturday)
+    var monthlyOption: MonthlyOption? // For monthly recurrence
+    var dayOfMonth: Int? // For monthly recurrence (1-31)
+    var endDate: Date?
+    var occurrenceCount: Int?
+}
+
 // MARK: - TodoTask Model
 struct TodoTask: Identifiable, Hashable, Codable, Sendable {
     var id = UUID()
@@ -25,6 +125,9 @@ struct TodoTask: Identifiable, Hashable, Codable, Sendable {
     var completionDate: Date?
     var priority: Priority = .none
     var estimatedDuration: TimeInterval?
+    var recurrenceRule: RecurrenceRule?
+    var customRecurrence: CustomRecurrence?
+    var parentTaskId: UUID? // For tracking the original recurring task
     
     enum Priority: String, CaseIterable, Codable {
         case none = "none"

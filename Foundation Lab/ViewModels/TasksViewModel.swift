@@ -142,7 +142,132 @@ final class TasksViewModel {
         var updatedTask = task
         updatedTask.isCompleted.toggle()
         updatedTask.completionDate = updatedTask.isCompleted ? Date() : nil
+        
+        // Handle recurring tasks
+        if updatedTask.isCompleted, let recurrenceRule = updatedTask.recurrenceRule {
+            print("🔄 Handling recurring task completion: \(updatedTask.title)")
+            
+            // Create a new task for the next occurrence
+            var nextTask = TodoTask(
+                title: updatedTask.title,
+                notes: updatedTask.notes,
+                tags: updatedTask.tags,
+                projectId: updatedTask.projectId,
+                areaId: updatedTask.areaId,
+                priority: updatedTask.priority,
+                estimatedDuration: updatedTask.estimatedDuration
+            )
+            
+            // Set the recurrence info
+            nextTask.recurrenceRule = recurrenceRule
+            nextTask.customRecurrence = updatedTask.customRecurrence
+            nextTask.parentTaskId = updatedTask.parentTaskId ?? updatedTask.id
+            
+            // Calculate next occurrence dates
+            let baseDate = updatedTask.scheduledDate ?? updatedTask.dueDate ?? Date()
+            
+            if recurrenceRule == .custom, let customRecurrence = updatedTask.customRecurrence {
+                // Handle custom recurrence
+                if let nextDate = calculateCustomNextOccurrence(from: baseDate, customRecurrence: customRecurrence) {
+                    if updatedTask.scheduledDate != nil {
+                        nextTask.scheduledDate = nextDate
+                    }
+                    if updatedTask.dueDate != nil {
+                        nextTask.dueDate = nextDate
+                    }
+                    addTask(nextTask)
+                    print("✅ Created next recurring task with custom rule for date: \(nextDate)")
+                }
+            } else {
+                // Use built-in recurrence rule
+                if let nextDate = recurrenceRule.nextOccurrence(from: baseDate) {
+                    if updatedTask.scheduledDate != nil {
+                        nextTask.scheduledDate = nextDate
+                    }
+                    if updatedTask.dueDate != nil {
+                        nextTask.dueDate = nextDate
+                    }
+                    addTask(nextTask)
+                    print("✅ Created next recurring task for date: \(nextDate)")
+                }
+            }
+        }
+        
         updateTask(updatedTask)
+    }
+    
+    private func calculateCustomNextOccurrence(from date: Date, customRecurrence: CustomRecurrence) -> Date? {
+        let calendar = Calendar.current
+        
+        // Check if we've reached the end date
+        if let endDate = customRecurrence.endDate {
+            let nextDate = calendar.date(byAdding: customRecurrence.unit.calendarComponent, value: customRecurrence.interval, to: date)
+            if let next = nextDate, next > endDate {
+                return nil
+            }
+        }
+        
+        // Calculate next occurrence based on unit and interval
+        if customRecurrence.unit == .week, let selectedDays = customRecurrence.selectedDays, !selectedDays.isEmpty {
+            // Handle weekly recurrence with specific days
+            var candidateDate = date
+            let currentWeekday = calendar.component(.weekday, from: candidateDate) - 1 // 0-based
+            
+            // Find next valid day
+            for _ in 0..<(customRecurrence.interval * 7 + 7) { // Check up to interval weeks + 1
+                candidateDate = calendar.date(byAdding: .day, value: 1, to: candidateDate)!
+                let weekday = calendar.component(.weekday, from: candidateDate) - 1
+                
+                if selectedDays.contains(weekday) {
+                    // Check if we're in the right week interval
+                    let weeksDiff = calendar.dateComponents([.weekOfYear], from: date, to: candidateDate).weekOfYear ?? 0
+                    if weeksDiff >= customRecurrence.interval {
+                        return candidateDate
+                    }
+                }
+            }
+            return nil
+        } else if customRecurrence.unit == .month {
+            // Handle monthly recurrence
+            guard let nextMonth = calendar.date(byAdding: .month, value: customRecurrence.interval, to: date) else {
+                return nil
+            }
+            
+            if let monthlyOption = customRecurrence.monthlyOption {
+                switch monthlyOption {
+                case .sameDay:
+                    if let dayOfMonth = customRecurrence.dayOfMonth {
+                        var components = calendar.dateComponents([.year, .month], from: nextMonth)
+                        components.day = dayOfMonth
+                        
+                        // If the day doesn't exist in this month (e.g., Feb 31), use the last day
+                        if let targetDate = calendar.date(from: components) {
+                            return targetDate
+                        } else {
+                            // Get last day of month
+                            components.day = nil
+                            if let firstOfMonth = calendar.date(from: components),
+                               let lastOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: firstOfMonth) {
+                                return lastOfMonth
+                            }
+                        }
+                    }
+                case .lastDay:
+                    // Get last day of next month
+                    var components = calendar.dateComponents([.year, .month], from: nextMonth)
+                    components.day = nil
+                    if let firstOfMonth = calendar.date(from: components),
+                       let lastOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: firstOfMonth) {
+                        return lastOfMonth
+                    }
+                }
+            }
+            
+            return nextMonth
+        } else {
+            // Simple interval-based calculation for other units
+            return calendar.date(byAdding: customRecurrence.unit.calendarComponent, value: customRecurrence.interval, to: date)
+        }
     }
     
     func moveTasks(_ taskIds: Set<UUID>, to destination: TaskFilter) {
