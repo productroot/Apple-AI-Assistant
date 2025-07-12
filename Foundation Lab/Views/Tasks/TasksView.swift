@@ -17,6 +17,7 @@ struct TasksView: View {
     @State private var areaToDelete: Area?
     @State private var projectToDelete: Project?
     @State private var editMode: EditMode = .inactive
+    @State private var showingOptimization = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
@@ -47,6 +48,14 @@ struct TasksView: View {
             TasksSectionDetailView(viewModel: viewModel, filter: filter)
         }
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    showingOptimization = true
+                } label: {
+                    Label("AI Optimize", systemImage: "sparkles")
+                }
+            }
+            
             ToolbarItem(placement: .navigationBarTrailing) {
                 EditButton()
             }
@@ -76,6 +85,9 @@ struct TasksView: View {
             }
         } message: { project in
             Text("Are you sure you want to delete \"\(project.name)\"? This will also delete all tasks within this project.")
+        }
+        .sheet(isPresented: $showingOptimization) {
+            TaskOptimizationView(viewModel: viewModel)
         }
     }
     

@@ -12,8 +12,8 @@ import Observation
 final class NavigationCoordinator {
     static let shared = NavigationCoordinator()
 
-    var tabSelection: TabSelection = .examples
-    var splitViewSelection: TabSelection? = .examples
+    var tabSelection: TabSelection = .tasks
+    var splitViewSelection: TabSelection? = .tasks
 
     private init() {}
 

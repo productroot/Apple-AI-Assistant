@@ -135,6 +135,125 @@ enum AIPrompts {
         return prompt
     }
     
+    // MARK: - Task Optimization
+    
+    /// Generates a prompt for AI-powered task optimization and planning
+    /// - Parameters:
+    ///   - tasks: Array of all tasks with their properties
+    ///   - projects: Array of all projects
+    ///   - areas: Array of all areas
+    ///   - currentDate: Current date for time-based analysis
+    ///   - userPreferences: Optional user preferences from past feedback
+    /// - Returns: A formatted prompt string
+    static func taskOptimization(
+        tasks: [(id: String, title: String, notes: String, priority: String, scheduledDate: Date?, dueDate: Date?, estimatedDuration: Int?, projectId: String?, areaId: String?, tags: [String], isCompleted: Bool, recurrenceRule: String?)],
+        projects: [(id: String, name: String, areaId: String?, deadline: Date?)],
+        areas: [(id: String, name: String)],
+        currentDate: Date,
+        userPreferences: [String]? = nil
+    ) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        
+        var prompt = "Analyze and optimize the following task list for maximum productivity. Current date and time: \(formatter.string(from: currentDate)).\n\n"
+        
+        // Add areas context
+        prompt += "AREAS (\(areas.count)):\n"
+        for area in areas {
+            prompt += "- \(area.name) (ID: \(area.id))\n"
+        }
+        
+        // Add projects context
+        prompt += "\nPROJECTS (\(projects.count)):\n"
+        for project in projects {
+            let areaName = areas.first { $0.id == project.areaId }?.name ?? "No Area"
+            var projectInfo = "- \(project.name) [Area: \(areaName)]"
+            if let deadline = project.deadline {
+                projectInfo += " [Deadline: \(formatter.string(from: deadline))]"
+            }
+            projectInfo += " (ID: \(project.id))"
+            prompt += projectInfo + "\n"
+        }
+        
+        // Add tasks context
+        prompt += "\nTASKS (\(tasks.count) active):\n"
+        for task in tasks.filter({ !$0.isCompleted }) {
+            var taskInfo = "- \(task.title)"
+            
+            if !task.notes.isEmpty {
+                taskInfo += " | Notes: \(task.notes)"
+            }
+            
+            taskInfo += " | Priority: \(task.priority)"
+            
+            if let projectId = task.projectId,
+               let project = projects.first(where: { $0.id == projectId }) {
+                taskInfo += " | Project: \(project.name)"
+            }
+            
+            if let scheduledDate = task.scheduledDate {
+                taskInfo += " | Scheduled: \(formatter.string(from: scheduledDate))"
+            }
+            
+            if let dueDate = task.dueDate {
+                taskInfo += " | Due: \(formatter.string(from: dueDate))"
+            }
+            
+            if let duration = task.estimatedDuration {
+                taskInfo += " | Duration: \(duration) min"
+            }
+            
+            if let recurrence = task.recurrenceRule {
+                taskInfo += " | Recurring: \(recurrence)"
+            }
+            
+            if !task.tags.isEmpty {
+                taskInfo += " | Tags: \(task.tags.joined(separator: ", "))"
+            }
+            
+            taskInfo += " (ID: \(task.id))"
+            prompt += taskInfo + "\n"
+        }
+        
+        // Add user preferences if available
+        if let preferences = userPreferences, !preferences.isEmpty {
+            prompt += "\nUSER PREFERENCES FROM PAST FEEDBACK:\n"
+            for pref in preferences {
+                prompt += "- \(pref)\n"
+            }
+        }
+        
+        prompt += """
+        
+        OPTIMIZATION INSTRUCTIONS:
+        1. Identify overdue or soon-to-be-due tasks that need immediate attention
+        2. Apply Eisenhower Matrix combined with ABC prioritization:
+           - A1: Urgent & Important (do immediately)
+           - A2: Important but not urgent (schedule)
+           - B1: Urgent but not important (delegate if possible)
+           - B2: Routine tasks
+           - C: Nice to have
+        3. Consider task duration when planning daily schedule - ensure realistic time allocation
+        4. Identify "quick wins" - tasks that are:
+           - Short duration (< 30 minutes)
+           - No dependencies
+           - High impact or satisfaction
+        5. Find tasks that could be:
+           - Batched together (similar context or tools)
+           - Delegated (based on tags or patterns)
+           - Automated (repetitive tasks)
+           - Deleted (no longer relevant)
+        6. Consider project deadlines and area balance
+        7. Respect recurring tasks and their schedules
+        8. Identify blocked tasks that depend on other incomplete tasks
+        
+        Provide specific, actionable recommendations for each task category. Focus on creating a balanced, achievable plan that maximizes productivity while preventing burnout.
+        """
+        
+        return prompt
+    }
+    
     // MARK: - Future Prompts
     // Add more prompt generation methods here as new AI features are added
 }

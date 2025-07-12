@@ -623,6 +623,72 @@ final class TasksViewModel {
         }
     }
     
+    // MARK: - AI Task Optimization
+    
+    @MainActor
+    func optimizeTasks() async throws -> TaskOptimizationAnalysis {
+        print("🤖 Starting AI task optimization")
+        
+        // Prepare task data
+        let taskData = tasks.map { task in
+            (
+                id: task.id.uuidString,
+                title: task.title,
+                notes: task.notes,
+                priority: task.priority.rawValue,
+                scheduledDate: task.scheduledDate,
+                dueDate: task.dueDate,
+                estimatedDuration: task.estimatedDuration != nil ? Int(task.estimatedDuration! / 60) : nil,
+                projectId: task.projectId?.uuidString,
+                areaId: task.areaId?.uuidString,
+                tags: task.tags,
+                isCompleted: task.isCompleted,
+                recurrenceRule: task.recurrenceRule?.rawValue
+            )
+        }
+        
+        // Prepare project data
+        let projectData = projects.map { project in
+            (
+                id: project.id.uuidString,
+                name: project.name,
+                areaId: project.areaId?.uuidString,
+                deadline: project.deadline
+            )
+        }
+        
+        // Prepare area data
+        let areaData = areas.map { area in
+            (
+                id: area.id.uuidString,
+                name: area.name
+            )
+        }
+        
+        // Get user preferences from feedback service
+        let userPreferences = OptimizationFeedbackService.shared.getUserPreferences()
+        
+        // Generate optimization prompt
+        let prompt = AIPrompts.taskOptimization(
+            tasks: taskData,
+            projects: projectData,
+            areas: areaData,
+            currentDate: Date(),
+            userPreferences: userPreferences.isEmpty ? nil : userPreferences
+        )
+        
+        // Use the language model to analyze and optimize
+        let session = LanguageModelSession()
+        
+        let response = try await session.respond(
+            to: Prompt(prompt),
+            generating: TaskOptimizationAnalysis.self
+        )
+        
+        print("✅ AI optimization completed")
+        return response.content
+    }
+    
     // MARK: - AI Generation
     
     @MainActor

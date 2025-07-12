@@ -35,12 +35,6 @@ struct AdaptiveNavigationView: View {
             get: { navigationCoordinator.tabSelection },
             set: { navigationCoordinator.tabSelection = $0 }
         )) {
-            Tab("Examples", systemImage: "sparkles", value: .examples) {
-                NavigationStack {
-                    ExamplesView(viewModel: $contentViewModel)
-                }
-            }
-            
             Tab("Tasks", systemImage: "checklist", value: .tasks) {
                 NavigationStack {
                     TasksView(viewModel: tasksViewModel)
@@ -50,6 +44,12 @@ struct AdaptiveNavigationView: View {
             Tab("Chat", systemImage: "bubble.left.and.bubble.right", value: .chat) {
                 NavigationStack {
                     ChatView(viewModel: $chatViewModel)
+                }
+            }
+            
+            Tab("Examples", systemImage: "sparkles", value: .examples) {
+                NavigationStack {
+                    ExamplesView(viewModel: $contentViewModel)
                 }
             }
             
@@ -89,7 +89,7 @@ struct AdaptiveNavigationView: View {
     
     @ViewBuilder
     private var detailView: some View {
-        switch navigationCoordinator.splitViewSelection ?? .examples {
+        switch navigationCoordinator.splitViewSelection ?? .tasks {
         case .examples:
             NavigationStack {
                 ExamplesView(viewModel: $contentViewModel)

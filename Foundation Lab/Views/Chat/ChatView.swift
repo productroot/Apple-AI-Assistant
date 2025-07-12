@@ -15,7 +15,24 @@ struct ChatView: View {
     @State private var showInstructions = false
     @State private var showFeedbackSheet = false
     @State private var selectedEntryForFeedback: Transcript.Entry?
+    @State private var selectedContext: ChatContext?
     @FocusState private var isTextFieldFocused: Bool
+    
+    enum ChatContext: String, CaseIterable {
+        case calendar = "Calendar"
+        
+        var icon: String {
+            switch self {
+            case .calendar: return "calendar"
+            }
+        }
+        
+        var description: String {
+            switch self {
+            case .calendar: return "Access calendar events"
+            }
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,6 +41,43 @@ struct ChatView: View {
                 .onTapGesture {
                     isTextFieldFocused = false
                 }
+            
+            // Context Pills
+            if !viewModel.isLoading {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(ChatContext.allCases, id: \.self) { context in
+                            Button {
+                                if selectedContext == context {
+                                    selectedContext = nil
+                                    viewModel.removeCalendarContext()
+                                } else {
+                                    selectedContext = context
+                                    if context == .calendar {
+                                        viewModel.updateCalendarContext()
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: context.icon)
+                                        .font(.caption)
+                                    Text(context.rawValue)
+                                        .font(.caption)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(selectedContext == context ? Color.blue : Color.secondary.opacity(0.2))
+                                .foregroundColor(selectedContext == context ? .white : .primary)
+                                .cornerRadius(16)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                }
+                .background(Color(UIColor.systemBackground))
+            }
 
             ChatInputView(
                 messageText: $messageText,

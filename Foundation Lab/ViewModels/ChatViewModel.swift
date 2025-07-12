@@ -20,10 +20,12 @@ final class ChatViewModel {
     var instructions: String = "You are a helpful, friendly AI assistant. Engage in natural conversation and provide thoughtful, detailed responses."
     var errorMessage: String?
     var showError: Bool = false
+    var hasCalendarContext: Bool = false
 
     // MARK: - Public Properties
 
     private(set) var session: LanguageModelSession
+    private var calendarTool: CalendarTool?
     
     // MARK: - Feedback State
     
@@ -36,6 +38,45 @@ final class ChatViewModel {
             instructions: Instructions(
                 "You are a helpful, friendly AI assistant. Engage in natural conversation and provide thoughtful, detailed responses."
             )
+        )
+    }
+    
+    // MARK: - Calendar Context
+    
+    @MainActor
+    func updateCalendarContext() {
+        hasCalendarContext = true
+        calendarTool = CalendarTool()
+        
+        // Update session with calendar-aware instructions and tool
+        let calendarInstructions = """
+        You are a helpful, friendly AI assistant with access to the user's calendar. 
+        You can help manage calendar events, check schedules, and provide information about upcoming events.
+        When the user asks about their calendar, schedule, or events, use the manageCalendar tool to access their calendar data.
+        Always be specific about dates and times when discussing calendar events.
+        
+        IMPORTANT: When querying events:
+        - Today is \(Date().formatted(date: .complete, time: .omitted))
+        - When user asks for a specific day (like "Monday"), calculate the correct daysAhead value to reach that day
+        - For example, if today is Friday and user asks for Monday, that's 3 days ahead, not 1
+        - The query action uses daysAhead parameter which counts from today
+        - Always verify you're calculating the correct number of days to the requested date
+        """
+        
+        self.session = LanguageModelSession(
+            tools: [calendarTool!],
+            instructions: Instructions(calendarInstructions)
+        )
+    }
+    
+    @MainActor
+    func removeCalendarContext() {
+        hasCalendarContext = false
+        calendarTool = nil
+        
+        // Reset session to default instructions without tools
+        self.session = LanguageModelSession(
+            instructions: Instructions(instructions)
         )
     }
 
@@ -116,9 +157,30 @@ final class ChatViewModel {
     func clearChat() {
         sessionCount = 1
         feedbackState.removeAll()
-        session = LanguageModelSession(
-            instructions: Instructions(instructions)
-        )
+        
+        if hasCalendarContext, let calendarTool = calendarTool {
+            let calendarInstructions = """
+            You are a helpful, friendly AI assistant with access to the user's calendar. 
+            You can help manage calendar events, check schedules, and provide information about upcoming events.
+            When the user asks about their calendar, schedule, or events, use the manageCalendar tool to access their calendar data.
+            Always be specific about dates and times when discussing calendar events.
+            
+            IMPORTANT: When querying events:
+            - Today is \(Date().formatted(date: .complete, time: .omitted))
+            - When user asks for a specific day (like "Monday"), calculate the correct daysAhead value to reach that day
+            - For example, if today is Friday and user asks for Monday, that's 3 days ahead, not 1
+            - The query action uses daysAhead parameter which counts from today
+            - Always verify you're calculating the correct number of days to the requested date
+            """
+            session = LanguageModelSession(
+                tools: [calendarTool],
+                instructions: Instructions(calendarInstructions)
+            )
+        } else {
+            session = LanguageModelSession(
+                instructions: Instructions(instructions)
+            )
+        }
     }
     
     @MainActor
@@ -200,8 +262,22 @@ final class ChatViewModel {
     }
 
     private func createNewSessionWithContext(summary: ConversationSummary) {
+        let baseInstructions = hasCalendarContext ? """
+        You are a helpful, friendly AI assistant with access to the user's calendar. 
+        You can help manage calendar events, check schedules, and provide information about upcoming events.
+        When the user asks about their calendar, schedule, or events, use the manageCalendar tool to access their calendar data.
+        Always be specific about dates and times when discussing calendar events.
+        
+        IMPORTANT: When querying events:
+        - Today is \(Date().formatted(date: .complete, time: .omitted))
+        - When user asks for a specific day (like "Monday"), calculate the correct daysAhead value to reach that day
+        - For example, if today is Friday and user asks for Monday, that's 3 days ahead, not 1
+        - The query action uses daysAhead parameter which counts from today
+        - Always verify you're calculating the correct number of days to the requested date
+        """ : instructions
+        
         let contextInstructions = """
-      \(instructions)
+      \(baseInstructions)
       
       You are continuing a conversation with a user. Here's a summary of your previous conversation:
       
@@ -217,7 +293,14 @@ final class ChatViewModel {
       Continue the conversation naturally, referencing this context when relevant. The user's next message is a continuation of your previous discussion.
       """
 
-        session = LanguageModelSession(instructions: Instructions(contextInstructions))
+        if hasCalendarContext, let calendarTool = calendarTool {
+            session = LanguageModelSession(
+                tools: [calendarTool],
+                instructions: Instructions(contextInstructions)
+            )
+        } else {
+            session = LanguageModelSession(instructions: Instructions(contextInstructions))
+        }
         sessionCount += 1
     }
 
