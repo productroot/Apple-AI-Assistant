@@ -227,3 +227,11 @@ struct TaskChecklist {
   @Guide(description: "Suggested order of completion: 'sequential' if items should be done in order, 'parallel' if they can be done in any order")
   let completionOrder: String?
 }
+
+// MARK: - Task Duration Estimate Model
+
+@Generable
+struct TaskDurationEstimate {
+  @Guide(description: "Estimated time in minutes for completing the task based on its title, description, checklist items and historical data. Provide a realistic estimate considering the complexity and scope of the task.")
+  let minutes: Int
+}

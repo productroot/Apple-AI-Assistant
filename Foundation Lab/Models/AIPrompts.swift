@@ -86,6 +86,55 @@ enum AIPrompts {
         return prompt
     }
     
+    // MARK: - Task Duration Estimation
+    
+    /// Generates a prompt for estimating task duration
+    /// - Parameters:
+    ///   - taskTitle: The title of the task
+    ///   - taskNotes: Optional task description/notes
+    ///   - checklistItems: Array of checklist items for the task
+    ///   - projectName: Optional project name the task belongs to
+    ///   - similarTasksHistory: Optional array of similar completed tasks with their actual durations
+    /// - Returns: A formatted prompt string
+    static func taskDurationEstimate(
+        taskTitle: String,
+        taskNotes: String? = nil,
+        checklistItems: [String] = [],
+        projectName: String? = nil,
+        similarTasksHistory: [(title: String, estimatedMinutes: Int, actualMinutes: Int)]? = nil
+    ) -> String {
+        var prompt = "Estimate the duration in minutes for completing this task: '\(taskTitle)'."
+        
+        // Add task notes as context if available
+        if let taskNotes = taskNotes, !taskNotes.isEmpty {
+            prompt += " Task description: \(taskNotes)"
+        }
+        
+        // Add checklist context if available
+        if !checklistItems.isEmpty {
+            prompt += " The task includes \(checklistItems.count) checklist items: \(checklistItems.joined(separator: ", "))."
+        }
+        
+        // Add project context if available
+        if let projectName = projectName {
+            prompt += " This task is part of the '\(projectName)' project."
+        }
+        
+        // Add historical data for learning if available
+        if let history = similarTasksHistory, !history.isEmpty {
+            prompt += " Based on similar completed tasks:"
+            for task in history.prefix(5) { // Limit to 5 most relevant examples
+                let accuracy = Double(task.actualMinutes) / Double(task.estimatedMinutes)
+                prompt += " - '\(task.title)' was estimated at \(task.estimatedMinutes) minutes but actually took \(task.actualMinutes) minutes (accuracy: \(Int(accuracy * 100))%)."
+            }
+            prompt += " Consider these patterns when making your estimate."
+        }
+        
+        prompt += " Provide a realistic estimate in minutes as a single number. Consider the complexity, the number of subtasks, and any historical patterns. Be conservative rather than optimistic."
+        
+        return prompt
+    }
+    
     // MARK: - Future Prompts
     // Add more prompt generation methods here as new AI features are added
 }

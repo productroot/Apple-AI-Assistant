@@ -121,7 +121,20 @@ final class TasksViewModel {
     
     func updateTask(_ task: TodoTask) {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
+            let oldTask = tasks[index]
             tasks[index] = task
+            
+            // Track duration changes
+            if oldTask.estimatedDuration != task.estimatedDuration,
+               let newDuration = task.estimatedDuration {
+                // User manually changed the duration
+                DurationLearningService.shared.recordUserOverride(
+                    taskId: task.id,
+                    userMinutes: Int(newDuration / 60)
+                )
+                print("👤 User override duration for '\(task.title)': \(Int(newDuration / 60)) minutes")
+            }
+            
             saveToiCloudIfEnabled()
         }
     }
@@ -130,6 +143,14 @@ final class TasksViewModel {
         tasks.removeAll { $0.id == task.id }
         selectedTasks.remove(task.id)
         saveToiCloudIfEnabled()
+    }
+    
+    func startTask(_ task: TodoTask) {
+        if let index = tasks.firstIndex(where: { $0.id == task.id }) {
+            tasks[index].startedAt = Date()
+            print("▶️ Started task '\(task.title)' at \(Date())")
+            saveToiCloudIfEnabled()
+        }
     }
     
     func deleteTasks(_ taskIds: Set<UUID>) {
@@ -141,7 +162,29 @@ final class TasksViewModel {
     func toggleTaskCompletion(_ task: TodoTask) {
         var updatedTask = task
         updatedTask.isCompleted.toggle()
-        updatedTask.completionDate = updatedTask.isCompleted ? Date() : nil
+        
+        if updatedTask.isCompleted {
+            // Task is being completed
+            updatedTask.completionDate = Date()
+            
+            // Calculate actual duration if task was started
+            if let startedAt = updatedTask.startedAt {
+                let actualDuration = Date().timeIntervalSince(startedAt)
+                let actualMinutes = Int(actualDuration / 60)
+                
+                // Record the actual duration for learning
+                DurationLearningService.shared.recordCompletion(
+                    taskId: task.id,
+                    actualMinutes: actualMinutes
+                )
+                
+                print("⏱️ Task '\(task.title)' completed in \(actualMinutes) minutes")
+            }
+        } else {
+            // Task is being uncompleted
+            updatedTask.completionDate = nil
+            updatedTask.startedAt = nil
+        }
         
         // Handle recurring tasks
         if updatedTask.isCompleted, let recurrenceRule = updatedTask.recurrenceRule {
@@ -211,7 +254,7 @@ final class TasksViewModel {
         if customRecurrence.unit == .week, let selectedDays = customRecurrence.selectedDays, !selectedDays.isEmpty {
             // Handle weekly recurrence with specific days
             var candidateDate = date
-            let currentWeekday = calendar.component(.weekday, from: candidateDate) - 1 // 0-based
+            _ = calendar.component(.weekday, from: candidateDate) - 1 // 0-based
             
             // Find next valid day
             for _ in 0..<(customRecurrence.interval * 7 + 7) { // Check up to interval weeks + 1
@@ -581,6 +624,66 @@ final class TasksViewModel {
     }
     
     // MARK: - AI Generation
+    
+    @MainActor
+    func estimateTaskDuration(for task: TodoTask) async throws -> TimeInterval {
+        print("📊 Estimating duration for task: \(task.title)")
+        
+        // Get project name if available
+        let projectName = task.projectId.flatMap { projectId in
+            projects.first { $0.id == projectId }?.name
+        }
+        
+        // Convert checklist items to strings
+        let checklistStrings = task.checklistItems.map { $0.title }
+        
+        // Fetch similar tasks history from DurationLearningService
+        let similarTasksHistory = DurationLearningService.shared.findSimilarTasks(
+            to: task.title,
+            taskNotes: task.notes,
+            checklistCount: task.checklistItems.count
+        )
+        
+        // Generate prompt using centralized prompt management
+        let prompt = AIPrompts.taskDurationEstimate(
+            taskTitle: task.title,
+            taskNotes: task.notes.isEmpty ? nil : task.notes,
+            checklistItems: checklistStrings,
+            projectName: projectName,
+            similarTasksHistory: similarTasksHistory
+        )
+        
+        // Use the language model to get duration estimate
+        let session = LanguageModelSession()
+        
+        let response = try await session.respond(
+            to: Prompt(prompt),
+            generating: TaskDurationEstimate.self
+        )
+        
+        let minutes = response.content.minutes
+        print("✅ AI estimated duration: \(minutes) minutes")
+        
+        return TimeInterval(minutes * 60) // Convert to seconds
+    }
+    
+    func recordDurationEstimation(taskId: UUID, aiEstimate: TimeInterval, taskTitle: String, taskNotes: String, checklistCount: Int) {
+        // Get project name if available  
+        let task = tasks.first { $0.id == taskId }
+        let projectName = task?.projectId.flatMap { projectId in
+            projects.first { $0.id == projectId }?.name
+        }
+        
+        // Record in DurationLearningService
+        DurationLearningService.shared.recordEstimate(
+            taskId: taskId,
+            taskTitle: taskTitle,
+            taskNotes: taskNotes,
+            checklistCount: checklistCount,
+            aiEstimateMinutes: Int(aiEstimate / 60),
+            projectName: projectName
+        )
+    }
     
     @MainActor
     func generateProjectDescription(for project: Project) async throws -> String {

@@ -128,6 +128,7 @@ struct TodoTask: Identifiable, Hashable, Codable, Sendable {
     var recurrenceRule: RecurrenceRule?
     var customRecurrence: CustomRecurrence?
     var parentTaskId: UUID? // For tracking the original recurring task
+    var startedAt: Date? // For tracking actual duration
     
     enum Priority: String, CaseIterable, Codable {
         case none = "none"

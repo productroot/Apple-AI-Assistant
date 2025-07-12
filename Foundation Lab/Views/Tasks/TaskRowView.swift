@@ -32,6 +32,9 @@ struct TaskRowView: View {
     @State private var editedRecurrenceRule: RecurrenceRule?
     @State private var editedCustomRecurrence: CustomRecurrence?
     @State private var showingCustomRecurrence = false
+    @State private var editedDuration: TimeInterval?
+    @State private var isGeneratingDuration = false
+    @State private var showDurationPicker = false
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
     @FocusState private var isNewChecklistItemFocused: Bool
@@ -62,6 +65,7 @@ struct TaskRowView: View {
         _editedScheduledDate = State(initialValue: task.scheduledDate)
         _editedRecurrenceRule = State(initialValue: task.recurrenceRule)
         _editedCustomRecurrence = State(initialValue: task.customRecurrence)
+        _editedDuration = State(initialValue: task.estimatedDuration)
     }
 
     var body: some View {
@@ -158,10 +162,18 @@ struct TaskRowView: View {
             
             // Completion button
             Button {
-                viewModel.toggleTaskCompletion(task)
+                if !task.isCompleted && task.startedAt == nil {
+                    // Start the task if not started
+                    viewModel.startTask(task)
+                } else {
+                    // Toggle completion
+                    viewModel.toggleTaskCompletion(task)
+                }
             } label: {
-                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(task.isCompleted ? .green : .secondary)
+                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : 
+                                task.startedAt != nil ? "play.circle.fill" : "circle")
+                    .foregroundStyle(task.isCompleted ? .green : 
+                                   task.startedAt != nil ? .blue : .secondary)
                     .font(.title3)
                     .contentTransition(.symbolEffect)
             }
@@ -211,6 +223,16 @@ struct TaskRowView: View {
                         }
                         .font(.caption)
                         .foregroundStyle(.purple)
+                    }
+                    
+                    if let duration = task.estimatedDuration {
+                        Label {
+                            Text(formatDuration(duration))
+                        } icon: {
+                            Image(systemName: "clock")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.orange)
                     }
                     
                     if !task.tags.isEmpty {
@@ -350,6 +372,42 @@ struct TaskRowView: View {
                         }
                         .font(.caption)
                     }
+                    
+                    // Duration Picker
+                    Menu {
+                        Button("15 min") { editedDuration = 15 * 60 }
+                        Button("30 min") { editedDuration = 30 * 60 }
+                        Button("1 hour") { editedDuration = 60 * 60 }
+                        Button("2 hours") { editedDuration = 2 * 60 * 60 }
+                        Button("4 hours") { editedDuration = 4 * 60 * 60 }
+                        Button("8 hours") { editedDuration = 8 * 60 * 60 }
+                        
+                        Divider()
+                        
+                        Button {
+                            generateDurationEstimate()
+                        } label: {
+                            Label("AI Estimate", systemImage: "sparkles")
+                        }
+                        
+                        Divider()
+                        
+                        Button("No Duration", role: .destructive) { editedDuration = nil }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                                .foregroundStyle(editedDuration != nil ? .orange : .secondary)
+                            if isGeneratingDuration {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                            } else {
+                                Text(durationDisplayText)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .font(.caption)
+                    }
+                    .disabled(isGeneratingDuration)
                                          
                      Spacer()
                  }
@@ -459,6 +517,7 @@ struct TaskRowView: View {
         updatedTask.checklistItems = task.checklistItems // Save updated checklist items
         updatedTask.recurrenceRule = editedRecurrenceRule
         updatedTask.customRecurrence = editedCustomRecurrence
+        updatedTask.estimatedDuration = editedDuration
         
         // Clear custom recurrence if not using custom rule
         if editedRecurrenceRule != .custom {
@@ -520,6 +579,60 @@ struct TaskRowView: View {
                     showGenerationError = true
                     isGeneratingChecklist = false
                     print("❌ Failed to generate checklist: \(error)")
+                }
+            }
+        }
+    }
+    
+    private var durationDisplayText: String {
+        if let duration = editedDuration {
+            return formatDuration(duration)
+        } else {
+            return "Duration"
+        }
+    }
+    
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let hours = Int(duration) / 3600
+        let minutes = (Int(duration) % 3600) / 60
+        
+        if hours > 0 && minutes > 0 {
+            return "\(hours)h \(minutes)m"
+        } else if hours > 0 {
+            return "\(hours)h"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+    
+    private func generateDurationEstimate() {
+        print("🤖 Starting AI duration estimation for task: \(task.title)")
+        isGeneratingDuration = true
+        
+        Task {
+            do {
+                let estimatedDuration = try await viewModel.estimateTaskDuration(for: task)
+                
+                await MainActor.run {
+                    editedDuration = estimatedDuration
+                    isGeneratingDuration = false
+                    print("✅ AI estimated duration: \(formatDuration(estimatedDuration))")
+                    
+                    // Store the AI estimation for learning
+                    viewModel.recordDurationEstimation(
+                        taskId: task.id,
+                        aiEstimate: estimatedDuration,
+                        taskTitle: task.title,
+                        taskNotes: task.notes,
+                        checklistCount: task.checklistItems.count
+                    )
+                }
+            } catch {
+                await MainActor.run {
+                    generationError = error.localizedDescription
+                    showGenerationError = true
+                    isGeneratingDuration = false
+                    print("❌ Failed to estimate duration: \(error)")
                 }
             }
         }
