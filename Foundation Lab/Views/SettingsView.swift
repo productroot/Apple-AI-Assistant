@@ -10,6 +10,7 @@ import Combine
 
 struct SettingsView: View {
   @AppStorage("exaAPIKey") private var exaAPIKey: String = ""
+  @AppStorage("createTasksFromChatReminders") private var createTasksFromChatReminders: Bool = false
   @State private var tempAPIKey: String = ""
   @State private var showingAlert = false
   @State private var alertMessage = ""
@@ -126,6 +127,16 @@ struct SettingsView: View {
           Text("iCloud Sync")
         } footer: {
           Text("Enable iCloud sync to keep your tasks backed up and synchronized across your devices.")
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+        
+        Section {
+          Toggle("Create Tasks from Chat Reminders", isOn: $createTasksFromChatReminders)
+        } header: {
+          Text("Chat Integration")
+        } footer: {
+          Text("When enabled, reminders created through the Chat will also be added to your Tasks list.")
             .font(.caption)
             .foregroundColor(.secondary)
         }

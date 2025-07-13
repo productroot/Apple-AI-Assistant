@@ -129,6 +129,7 @@ struct TodoTask: Identifiable, Hashable, Codable, Sendable {
     var customRecurrence: CustomRecurrence?
     var parentTaskId: UUID? // For tracking the original recurring task
     var startedAt: Date? // For tracking actual duration
+    var createdFromReminder: Bool = false // For tracking tasks created from chat reminders
     
     enum Priority: String, CaseIterable, Codable {
         case none = "none"

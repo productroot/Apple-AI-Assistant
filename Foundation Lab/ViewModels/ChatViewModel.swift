@@ -28,6 +28,7 @@ final class ChatViewModel {
     private(set) var session: LanguageModelSession
     private var calendarTool: CalendarTool?
     private var remindersTool: RemindersTool?
+    private var tasksViewModel: TasksViewModel?
     
     // MARK: - Feedback State
     
@@ -35,7 +36,8 @@ final class ChatViewModel {
 
     // MARK: - Initialization
 
-    init() {
+    init(tasksViewModel: TasksViewModel? = nil) {
+        self.tasksViewModel = tasksViewModel
         self.session = LanguageModelSession(
             instructions: Instructions(
                 "You are a helpful, friendly AI assistant. Engage in natural conversation and provide thoughtful, detailed responses."
@@ -101,6 +103,7 @@ final class ChatViewModel {
             - For priorities, support: none, low, medium, high, and ASAP
             - Be helpful in interpreting the user's intent and provide clear confirmation of actions taken
             - When confirming reminder creation or updates, DO NOT mention the reminder ID - just confirm the action, title, date/time, and priority
+        - If the user has enabled "Create Tasks from Chat Reminders" in settings, a corresponding task will also be created automatically
             """
         }
         
@@ -130,6 +133,7 @@ final class ChatViewModel {
             - For priorities, support: none, low, medium, high, and ASAP
             - Be helpful in interpreting the user's intent and provide clear confirmation of actions taken
             - When confirming reminder creation or updates, DO NOT mention the reminder ID - just confirm the action, title, date/time, and priority
+        - If the user has enabled "Create Tasks from Chat Reminders" in settings, a corresponding task will also be created automatically
             """
             
             self.session = LanguageModelSession(
@@ -191,6 +195,7 @@ final class ChatViewModel {
         - For priorities, support: none, low, medium, high, and ASAP
         - Be helpful in interpreting the user's intent and provide clear confirmation of actions taken
         - When confirming reminder creation or updates, DO NOT mention the reminder ID - just confirm the action, title, date/time, and priority
+        - If the user has enabled "Create Tasks from Chat Reminders" in settings, a corresponding task will also be created automatically
         """
         
         if hasCalendarContext {
@@ -257,6 +262,9 @@ final class ChatViewModel {
             for try await _ in responseStream {
                 // The streaming automatically updates the session transcript
             }
+            
+            // After streaming completes, check if we need to create tasks from reminders
+            await checkAndCreateTasksFromReminders()
 
         } catch LanguageModelSession.GenerationError.exceededContextWindowSize {
             // Handle context window exceeded by summarizing and creating new session
@@ -533,5 +541,110 @@ final class ChatViewModel {
     func dismissError() {
         showError = false
         errorMessage = nil
+    }
+    
+    // MARK: - Task Creation from Reminders
+    
+    @MainActor
+    private func checkAndCreateTasksFromReminders() async {
+        // Check if the setting is enabled
+        guard UserDefaults.standard.bool(forKey: "createTasksFromChatReminders"),
+              let tasksViewModel = tasksViewModel,
+              hasRemindersContext else { return }
+        
+        // Look for recent tool outputs that indicate reminder creation
+        let recentEntries = session.transcript.suffix(5) // Check last 5 entries
+        
+        for entry in recentEntries {
+            if case .toolOutput(let toolOutput) = entry {
+                // Extract text from tool output
+                let text = toolOutput.segments.compactMap { segment in
+                    if case .text(let textSegment) = segment {
+                        return textSegment.content
+                    }
+                    return nil
+                }.joined()
+                
+                // Check if this is a successful reminder creation
+                if text.contains("\"status\": \"success\"") && text.contains("\"message\": \"Reminder created successfully\"") {
+                    // Parse the reminder details from the JSON
+                    if let reminderInfo = parseReminderFromJSON(text) {
+                        // Create a corresponding task
+                        await createTaskFromReminder(reminderInfo, tasksViewModel: tasksViewModel)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func parseReminderFromJSON(_ json: String) -> (title: String, notes: String?, dueDate: Date?, priority: String)? {
+        // Simple parsing - in production, use proper JSON decoding
+        var title: String?
+        var notes: String?
+        var dueDate: Date?
+        var priority = "medium"
+        
+        // Extract title
+        if let titleRange = json.range(of: "\"title\": \""),
+           let endRange = json[titleRange.upperBound...].range(of: "\"") {
+            title = String(json[titleRange.upperBound..<endRange.lowerBound])
+        }
+        
+        // Extract notes if present
+        if let notesRange = json.range(of: "\"notes\": \""),
+           let endRange = json[notesRange.upperBound...].range(of: "\"") {
+            notes = String(json[notesRange.upperBound..<endRange.lowerBound])
+        }
+        
+        // Extract due date
+        if let dueDateRange = json.range(of: "\"dueDate\": \""),
+           let endRange = json[dueDateRange.upperBound...].range(of: "\"") {
+            let dueDateString = String(json[dueDateRange.upperBound..<endRange.lowerBound])
+            
+            // Parse the date string (format: "Jul 14, 2025 at 2:00 PM")
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d, yyyy 'at' h:mm a"
+            formatter.locale = Locale(identifier: "en_US")
+            dueDate = formatter.date(from: dueDateString)
+        }
+        
+        // Extract priority
+        if let priorityRange = json.range(of: "\"priority\": \""),
+           let endRange = json[priorityRange.upperBound...].range(of: "\"") {
+            let priorityString = String(json[priorityRange.upperBound..<endRange.lowerBound]).lowercased()
+            
+            // Map reminder priority to task priority
+            switch priorityString {
+            case "high", "asap":
+                priority = "high"
+            case "medium":
+                priority = "medium"
+            case "low", "none":
+                priority = "low"
+            default:
+                priority = "medium"
+            }
+        }
+        
+        guard let title = title else { return nil }
+        
+        return (title: title, notes: notes, dueDate: dueDate, priority: priority)
+    }
+    
+    @MainActor
+    private func createTaskFromReminder(_ reminderInfo: (title: String, notes: String?, dueDate: Date?, priority: String), tasksViewModel: TasksViewModel) async {
+        // Create a new task
+        let task = TodoTask(
+            title: reminderInfo.title,
+            notes: reminderInfo.notes ?? "",
+            priority: TodoTask.Priority(rawValue: reminderInfo.priority) ?? .medium,
+            dueDate: reminderInfo.dueDate,
+            createdFromReminder: true
+        )
+        
+        // Add to tasks
+        tasksViewModel.addTask(task)
+        
+        print("📝 Created task from reminder: \(task.title)")
     }
 }
