@@ -103,7 +103,7 @@ final class ChatViewModel {
             - For priorities, support: none, low, medium, high, and ASAP
             - Be helpful in interpreting the user's intent and provide clear confirmation of actions taken
             - When confirming reminder creation or updates, DO NOT mention the reminder ID - just confirm the action, title, date/time, and priority
-        - If the user has enabled "Create Tasks from Chat Reminders" in settings, a corresponding task will also be created automatically
+            - If the user has enabled "Create Tasks from Chat Reminders" in settings, a corresponding task will also be created automatically
             """
         }
         
@@ -133,7 +133,7 @@ final class ChatViewModel {
             - For priorities, support: none, low, medium, high, and ASAP
             - Be helpful in interpreting the user's intent and provide clear confirmation of actions taken
             - When confirming reminder creation or updates, DO NOT mention the reminder ID - just confirm the action, title, date/time, and priority
-        - If the user has enabled "Create Tasks from Chat Reminders" in settings, a corresponding task will also be created automatically
+            - If the user has enabled "Create Tasks from Chat Reminders" in settings, a corresponding task will also be created automatically
             """
             
             self.session = LanguageModelSession(
