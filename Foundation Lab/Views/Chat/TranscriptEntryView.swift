@@ -28,11 +28,10 @@ struct TranscriptEntryView: View {
         case .toolCalls(let toolCalls):
             ForEach(Array(toolCalls.enumerated()), id: \.offset) { index, toolCall in
                 let toolDisplayName = formatToolName(toolCall.toolName)
-                MessageBubbleView(message: ChatMessage(
-                    entryID: entry.id,
-                    content: "🔧 Tool used: \(toolDisplayName)",
-                    isFromUser: false
-                ))
+                ToolStatusView(
+                    icon: "🔧",
+                    text: "Tool used: \(toolDisplayName)"
+                )
                 .id("\(entry.id)-tool-\(index)")
             }
             
@@ -43,22 +42,20 @@ struct TranscriptEntryView: View {
                 if text.hasPrefix("{") && text.contains("\"status\"") {
                     // This is raw JSON output - show a simple success message instead
                     let isSuccess = text.contains("\"success\"")
-                    let message = isSuccess ? "✅ Tool completed successfully" : "❌ Tool failed"
-                    MessageBubbleView(message: ChatMessage(
-                        entryID: entry.id,
-                        content: message,
-                        isFromUser: false
-                    ))
+                    let icon = isSuccess ? "✅" : "❌"
+                    let message = isSuccess ? "Tool completed successfully" : "Tool failed"
+                    ToolStatusView(
+                        icon: icon,
+                        text: message
+                    )
                     .id(entry.id)
                 } else {
-                    // This is formatted text - show it as is
-                    MessageBubbleView(message: ChatMessage(
-                        entryID: entry.id,
-                        content: "🔧 Tool result: \(text)",
-                        isFromUser: false
-                    ))
+                    // This is formatted text - show it as a tool status
+                    ToolStatusView(
+                        icon: "🔧",
+                        text: "Tool result: \(text)"
+                    )
                     .id(entry.id)
-                    .animation(.easeInOut(duration: 0.3), value: text)
                 }
             } else {
                 // If no text segments, don't show anything
@@ -119,5 +116,25 @@ struct TranscriptEntryView: View {
         // Don't show the raw tool output - the AI will generate a proper response
         // Return empty string to hide the technical JSON output
         return ""
+    }
+}
+
+// MARK: - Tool Status View
+
+struct ToolStatusView: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(icon)
+                .font(.caption)
+            Text(text)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Spacer()
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 4)
     }
 }
