@@ -439,73 +439,78 @@ struct TasksSectionDetailView: View {
     }
     
     private var logbookBody: some View {
-        ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(logbookTasks) { task in
-                        TaskRowView(
-                            task: task,
-                            viewModel: viewModel,
-                            isSelected: viewModel.selectedTasks.contains(task.id),
-                            onTap: {
-                                if viewModel.isMultiSelectMode {
-                                    toggleSelection(for: task)
-                                } else {
-                                    selectedTask = task
-                                }
-                            },
-                            onEditingChanged: { isEditing, task in
-                                editingTask = isEditing ? task : nil
-                                if !isEditing {
-                                    shouldSaveEditingTask = false
-                                }
-                            },
-                            onMoveRequested: { task in
-                                editingTask = task
-                                showingMoveSheet = true
-                            },
-                            onDeleteRequested: { task in
-                                editingTask = task
-                                showingDeleteTaskAlert = true
-                            },
-                            onDuplicateRequested: { task in
-                                duplicateTask(task)
-                            },
-                            shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id
-                        )
-                        .onDrag {
-                            NSItemProvider(object: task.id.uuidString as NSString)
+        List {
+            ForEach(logbookTasks) { task in
+                TaskRowView(
+                    task: task,
+                    viewModel: viewModel,
+                    isSelected: viewModel.selectedTasks.contains(task.id),
+                    onTap: {
+                        if viewModel.isMultiSelectMode {
+                            toggleSelection(for: task)
+                        } else {
+                            selectedTask = task
                         }
-                    }
-                    
-                    // Show empty state if no completed tasks
-                    if logbookTasks.isEmpty {
-                        VStack(spacing: 16) {
-                            Image(systemName: "book.closed")
-                                .font(.system(size: 48))
-                                .foregroundStyle(.secondary)
-                            
-                            Text("No Completed Tasks")
-                                .font(.title2)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.primary)
-                            
-                            Text("Completed tasks will appear here.")
-                                .font(.body)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
+                    },
+                    onEditingChanged: { isEditing, task in
+                        editingTask = isEditing ? task : nil
+                        if !isEditing {
+                            shouldSaveEditingTask = false
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 80)
-                    }
+                    },
+                    onMoveRequested: { task in
+                        editingTask = task
+                        showingMoveSheet = true
+                    },
+                    onDeleteRequested: { task in
+                        editingTask = task
+                        showingDeleteTaskAlert = true
+                    },
+                    onDuplicateRequested: { task in
+                        duplicateTask(task)
+                    },
+                    shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id
+                )
+                .onDrag {
+                    NSItemProvider(object: task.id.uuidString as NSString)
                 }
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
             }
-            .scrollContentBackground(.hidden)
-            .background(Color(.systemGroupedBackground))
-            .contentShape(Rectangle())
-            .onTapGesture {
-                closeEditingMode()
+            
+            // Show empty state if no completed tasks
+            if logbookTasks.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "book.closed")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.secondary)
+                    
+                    Text("No Completed Tasks")
+                        .font(.title2)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+                    
+                    Text("Completed tasks will appear here.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 80)
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
             }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color(.systemGroupedBackground))
+        .contentShape(Rectangle())
+        .onTapGesture {
+            closeEditingMode()
+        }
     }
     
     // MARK: - Helper Methods
@@ -529,49 +534,51 @@ struct TasksSectionDetailView: View {
 
     @ViewBuilder
     private var defaultBody: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(filteredTasks) { task in
-                    TaskRowView(
-                        task: task,
-                        viewModel: viewModel,
-                        isSelected: viewModel.selectedTasks.contains(task.id),
-                        onTap: {
-                            if viewModel.isMultiSelectMode {
-                                toggleSelection(for: task)
-                            } else {
-                                selectedTask = task
-                            }
-                        },
-                        onEditingChanged: { isEditing, task in
-                            editingTask = isEditing ? task : nil
-                            if !isEditing {
-                                shouldSaveEditingTask = false
-                            }
-                        },
-                        onMoveRequested: { task in
-                            editingTask = task
-                            showingMoveSheet = true
-                        },
-                        onDeleteRequested: { task in
-                            editingTask = task
-                            showingDeleteTaskAlert = true
-                        },
-                        onDuplicateRequested: { task in
-                            duplicateTask(task)
-                        },
-                        shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id
-                    )
-                    .onDrag {
-                        NSItemProvider(object: task.id.uuidString as NSString)
-                    }
+        List {
+            ForEach(filteredTasks) { task in
+                TaskRowView(
+                    task: task,
+                    viewModel: viewModel,
+                    isSelected: viewModel.selectedTasks.contains(task.id),
+                    onTap: {
+                        if viewModel.isMultiSelectMode {
+                            toggleSelection(for: task)
+                        } else {
+                            selectedTask = task
+                        }
+                    },
+                    onEditingChanged: { isEditing, task in
+                        editingTask = isEditing ? task : nil
+                        if !isEditing {
+                            shouldSaveEditingTask = false
+                        }
+                    },
+                    onMoveRequested: { task in
+                        editingTask = task
+                        showingMoveSheet = true
+                    },
+                    onDeleteRequested: { task in
+                        editingTask = task
+                        showingDeleteTaskAlert = true
+                    },
+                    onDuplicateRequested: { task in
+                        duplicateTask(task)
+                    },
+                    shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id
+                )
+                .onDrag {
+                    NSItemProvider(object: task.id.uuidString as NSString)
                 }
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
             }
 
             if !completedTasks.isEmpty {
                 completedTasksSection
             }
         }
+        .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color(.systemGroupedBackground))
         .contentShape(Rectangle())

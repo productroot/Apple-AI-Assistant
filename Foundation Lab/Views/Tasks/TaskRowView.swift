@@ -35,6 +35,7 @@ struct TaskRowView: View {
     @State private var editedDuration: TimeInterval?
     @State private var isGeneratingDuration = false
     @State private var showDurationPicker = false
+    @State private var showingDeleteAlert = false
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
     @FocusState private var isNewChecklistItemFocused: Bool
@@ -90,6 +91,44 @@ struct TaskRowView: View {
             }
             // Don't handle tap in edit mode here - let the background gesture handle it
         }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            // Only show swipe actions when not in edit mode, multi-select mode, or for completed tasks
+            if !isEditing && !viewModel.isMultiSelectMode && !task.isCompleted {
+                Button(role: .destructive) {
+                    // If parent provided a delete handler, use it; otherwise show our own alert
+                    if let onDeleteRequested = onDeleteRequested {
+                        onDeleteRequested(task)
+                    } else {
+                        showingDeleteAlert = true
+                    }
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .tint(.red)
+                
+                Button {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isEditing = true
+                        onEditingChanged?(true, task)
+                    }
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+                .tint(.blue)
+            }
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            // Leading swipe action for quick complete
+            if !isEditing && !viewModel.isMultiSelectMode && !task.isCompleted {
+                Button {
+                    print("✅ Completing task via swipe: \(task.title)")
+                    viewModel.toggleTaskCompletion(task)
+                } label: {
+                    Label("Complete", systemImage: "checkmark.circle.fill")
+                }
+                .tint(.green)
+            }
+        }
         .onChange(of: isTitleFocused) { oldValue, newValue in
             // Auto-save when title field loses focus
             if oldValue && !newValue && isEditing && !isNotesFocused {
@@ -131,6 +170,16 @@ struct TaskRowView: View {
                     editedRecurrenceRule = .custom
                 }
             }
+        }
+        .alert("Delete Task", isPresented: $showingDeleteAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                print("🗑️ Deleting task: \(task.title)")
+                viewModel.deleteTask(task)
+                // Don't call the callback here as this alert is only shown when there's no callback
+            }
+        } message: {
+            Text("Are you sure you want to delete \"\(task.title)\"?")
         }
 
     }
