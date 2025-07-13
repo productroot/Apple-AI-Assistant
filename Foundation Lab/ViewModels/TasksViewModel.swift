@@ -936,4 +936,48 @@ final class TasksViewModel {
             throw error
         }
     }
+    
+    // MARK: - Task Dependency Analysis
+    
+    @MainActor
+    func analyzeDependencies(
+        _ graph: TaskDependencyAnalyzer.DependencyGraph
+    ) async throws -> String {
+        print("🤖 Analyzing task dependencies with AI")
+        
+        let prompt = AIPrompts.dependencyAnalysis(graph: graph)
+        
+        do {
+            let session = LanguageModelSession()
+            let response = try await session.respond(to: Prompt(prompt))
+            
+            print("✅ Dependency analysis completed")
+            return response.content
+        } catch {
+            print("❌ Failed to analyze dependencies: \(error)")
+            throw error
+        }
+    }
+    
+    // MARK: - Productivity Insights
+    
+    @MainActor
+    func generateProductivityInsights(
+        _ dashboard: TaskInsightsAnalyzer.InsightsDashboard
+    ) async throws -> String {
+        print("🤖 Generating deep productivity insights")
+        
+        let prompt = AIPrompts.productivityInsights(dashboard: dashboard)
+        
+        do {
+            let session = LanguageModelSession()
+            let response = try await session.respond(to: Prompt(prompt))
+            
+            print("✅ Productivity insights generated")
+            return response.content
+        } catch {
+            print("❌ Failed to generate productivity insights: \(error)")
+            throw error
+        }
+    }
 }

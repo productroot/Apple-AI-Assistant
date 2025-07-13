@@ -364,6 +364,118 @@ enum AIPrompts {
         return prompt
     }
     
+    // MARK: - Task Dependency Analysis
+    
+    /// Generates a prompt for analyzing task dependencies
+    /// - Parameters:
+    ///   - graph: The dependency graph with tasks and relationships
+    /// - Returns: A formatted prompt string
+    static func dependencyAnalysis(
+        graph: TaskDependencyAnalyzer.DependencyGraph
+    ) -> String {
+        var prompt = """
+        Analyze this task dependency graph and provide insights about task ordering and potential bottlenecks.
+        
+        TASK DEPENDENCIES:
+        Tasks: \(graph.tasks.count)
+        Dependencies: \(graph.dependencies.count)
+        Has circular dependencies: \(graph.hasCycles)
+        Critical path length: \(graph.criticalPath.count) tasks
+        
+        DEPENDENCY DETAILS:
+        """
+        
+        for dependency in graph.dependencies {
+            let fromTask = graph.tasks.first { $0.id == dependency.dependsOnTaskId }?.title ?? "Unknown"
+            let toTask = graph.tasks.first { $0.id == dependency.taskId }?.title ?? "Unknown"
+            
+            prompt += "\n- \"\(toTask)\" \(dependency.dependencyType.description.lowercased()) \"\(fromTask)\" (confidence: \(Int(dependency.confidence * 100))%)"
+        }
+        
+        if !graph.clusters.isEmpty {
+            prompt += "\n\nTASK CLUSTERS:"
+            for cluster in graph.clusters {
+                prompt += "\n- \(cluster.name): \(cluster.taskIds.count) tasks"
+            }
+        }
+        
+        prompt += """
+        
+        
+        ANALYSIS REQUIRED:
+        1. Identify the critical path and explain why these tasks are critical
+        2. Find potential bottlenecks where multiple tasks depend on a single task
+        3. Suggest optimal task ordering to maximize parallel work
+        4. Identify tasks that could be started immediately (no dependencies)
+        5. Warn about any circular dependencies or problematic patterns
+        6. Recommend ways to break dependencies for better flow
+        
+        Provide specific, actionable recommendations for task scheduling and dependency management.
+        """
+        
+        return prompt
+    }
+    
+    // MARK: - Productivity Insights Analysis
+    
+    /// Generates a prompt for deep productivity insights
+    /// - Parameters:
+    ///   - dashboard: The insights dashboard with analyzed data
+    /// - Returns: A formatted prompt string
+    static func productivityInsights(
+        dashboard: TaskInsightsAnalyzer.InsightsDashboard
+    ) -> String {
+        var prompt = """
+        Provide deep analysis and personalized recommendations based on these productivity insights.
+        
+        OVERALL PRODUCTIVITY:
+        - Score: \(Int(dashboard.overallProductivityScore * 100))/100
+        - Current streak: \(dashboard.streakDays) days
+        
+        KEY INSIGHTS:
+        """
+        
+        for insight in dashboard.insights {
+            prompt += "\n- \(insight.title): \(insight.value) (\(insight.trend))"
+            if let recommendation = insight.recommendation {
+                prompt += "\n  Recommendation: \(recommendation)"
+            }
+        }
+        
+        if !dashboard.timeAnalysis.isEmpty {
+            prompt += "\n\nTIME OF DAY PATTERNS:"
+            for analysis in dashboard.timeAnalysis.sorted(by: { $0.efficiency > $1.efficiency }).prefix(3) {
+                prompt += "\n- \(analysis.timeLabel): \(analysis.completionCount) tasks, efficiency: \(String(format: "%.0f", analysis.efficiency * 100))%"
+            }
+        }
+        
+        if !dashboard.projectHealthMetrics.isEmpty {
+            prompt += "\n\nPROJECT HEALTH:"
+            for metric in dashboard.projectHealthMetrics {
+                prompt += "\n- \(metric.project.name): \(metric.healthStatus) (\(Int(metric.health * 100))%)"
+                if !metric.risks.isEmpty {
+                    prompt += " - Risks: \(metric.risks.joined(separator: ", "))"
+                }
+            }
+        }
+        
+        prompt += """
+        
+        
+        ANALYSIS REQUIRED:
+        1. Explain the user's productivity patterns in simple terms
+        2. Identify strengths to maintain and weaknesses to improve
+        3. Provide specific time management strategies based on their patterns
+        4. Suggest habit changes that could improve productivity
+        5. Recommend focus areas for the next week/month
+        6. Provide motivational insights based on positive trends
+        
+        Keep the tone encouraging and focus on actionable improvements. Celebrate successes while gently addressing areas for growth.
+        """
+        
+        return prompt
+    }
+    
     // MARK: - Future Prompts
     // Add more prompt generation methods here as new AI features are added
 }

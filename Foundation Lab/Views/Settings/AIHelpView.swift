@@ -107,6 +107,39 @@ struct AIHelpView: View {
                         ],
                         howToUse: "Type @ followed by a space to search for contacts while creating or editing tasks"
                     )
+                    
+                    // Task Dependency Detection
+                    AIFeatureCard(
+                        icon: "network",
+                        iconColor: .cyan,
+                        title: "Task Dependency Detection",
+                        description: "AI identifies dependencies between tasks and suggests optimal ordering",
+                        features: [
+                            "Automatic detection of task relationships",
+                            "Visual dependency graph with zoom controls",
+                            "Critical path identification",
+                            "Bottleneck warnings and resolution suggestions",
+                            "Cluster visualization for related tasks"
+                        ],
+                        howToUse: "Access from Tasks view → AI Tools → Task Dependencies"
+                    )
+                    
+                    // Task Insights Dashboard
+                    AIFeatureCard(
+                        icon: "chart.line.uptrend.xyaxis",
+                        iconColor: .pink,
+                        title: "Task Insights Dashboard",
+                        description: "AI-generated insights about your productivity patterns and habits",
+                        features: [
+                            "Productivity score and trend analysis",
+                            "Peak productivity time detection",
+                            "Task completion patterns by time of day",
+                            "Project health metrics and warnings",
+                            "Personalized productivity recommendations",
+                            "Streak tracking for motivation"
+                        ],
+                        howToUse: "Access from Tasks view → AI Tools → Productivity Insights"
+                    )
                 }
                 .padding(.horizontal)
                 

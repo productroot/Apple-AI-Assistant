@@ -20,6 +20,8 @@ struct TasksView: View {
     @State private var showingOptimization = false
     @State private var showingWorkloadBalance = false
     @State private var showingRecurrenceSuggestions = false
+    @State private var showingDependencyGraph = false
+    @State private var showingInsightsDashboard = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
@@ -69,6 +71,20 @@ struct TasksView: View {
                     } label: {
                         Label("Detect Patterns", systemImage: "arrow.clockwise")
                     }
+                    
+                    Divider()
+                    
+                    Button {
+                        showingDependencyGraph = true
+                    } label: {
+                        Label("Task Dependencies", systemImage: "network")
+                    }
+                    
+                    Button {
+                        showingInsightsDashboard = true
+                    } label: {
+                        Label("Productivity Insights", systemImage: "chart.line.uptrend.xyaxis")
+                    }
                 } label: {
                     Label("AI Tools", systemImage: "sparkles")
                 }
@@ -112,6 +128,12 @@ struct TasksView: View {
         }
         .sheet(isPresented: $showingRecurrenceSuggestions) {
             RecurrenceSuggestionView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showingDependencyGraph) {
+            DependencyGraphView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showingInsightsDashboard) {
+            TaskInsightsDashboardView(viewModel: viewModel)
         }
     }
     
