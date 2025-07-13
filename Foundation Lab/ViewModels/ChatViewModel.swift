@@ -21,11 +21,13 @@ final class ChatViewModel {
     var errorMessage: String?
     var showError: Bool = false
     var hasCalendarContext: Bool = false
+    var hasRemindersContext: Bool = false
 
     // MARK: - Public Properties
 
     private(set) var session: LanguageModelSession
     private var calendarTool: CalendarTool?
+    private var remindersTool: RemindersTool?
     
     // MARK: - Feedback State
     
@@ -48,24 +50,63 @@ final class ChatViewModel {
         hasCalendarContext = true
         calendarTool = CalendarTool()
         
-        // Update session with calendar-aware instructions and tool
-        let calendarInstructions = """
-        You are a helpful, friendly AI assistant with access to the user's calendar. 
+        // Build tools array with all active tools
+        var tools: [any Tool] = [calendarTool!]
+        if let remindersTool = remindersTool {
+            tools.append(remindersTool)
+        }
+        
+        // Build combined instructions
+        var combinedInstructions = "You are a helpful, friendly AI assistant with access to the user's calendar."
+        
+        if hasRemindersContext {
+            combinedInstructions += " You also have access to the user's reminders."
+        }
+        
+        combinedInstructions += """
+         
         You can help manage calendar events, check schedules, and provide information about upcoming events.
         When the user asks about their calendar, schedule, or events, use the manageCalendar tool to access their calendar data.
+        """
+        
+        if hasRemindersContext {
+            combinedInstructions += """
+            
+            You can also help create, manage, and query reminders based on natural language requests.
+            """
+        }
+        
+        combinedInstructions += """
+        
         Always be specific about dates and times when discussing calendar events.
         
-        IMPORTANT: When querying events:
+        IMPORTANT:
         - Today is \(Date().formatted(date: .complete, time: .omitted))
+        - Current time is \(Date().formatted(date: .omitted, time: .standard))
+        - User's timezone is \(TimeZone.current.identifier)
+        
+        For calendar queries:
         - When user asks for a specific day (like "Monday"), calculate the correct daysAhead value to reach that day
         - For example, if today is Friday and user asks for Monday, that's 3 days ahead, not 1
         - The query action uses daysAhead parameter which counts from today
         - Always verify you're calculating the correct number of days to the requested date
         """
         
+        if hasRemindersContext {
+            combinedInstructions += """
+            
+            
+            For reminders:
+            - When parsing dates from natural language, consider relative terms like "tomorrow", "next week", etc.
+            - For priorities, support: none, low, medium, high, and ASAP
+            - Be helpful in interpreting the user's intent and provide clear confirmation of actions taken
+            - When confirming reminder creation or updates, DO NOT mention the reminder ID - just confirm the action, title, date/time, and priority
+            """
+        }
+        
         self.session = LanguageModelSession(
-            tools: [calendarTool!],
-            instructions: Instructions(calendarInstructions)
+            tools: tools,
+            instructions: Instructions(combinedInstructions)
         )
     }
     
@@ -74,10 +115,133 @@ final class ChatViewModel {
         hasCalendarContext = false
         calendarTool = nil
         
-        // Reset session to default instructions without tools
+        // If reminders context is still active, keep the reminders tool
+        if hasRemindersContext, let remindersTool = remindersTool {
+            let remindersInstructions = """
+            You are a helpful, friendly AI assistant with access to the user's reminders. 
+            You can help create, manage, and query reminders based on natural language requests.
+            When the user asks about their reminders or wants to create/manage reminders, use the manageReminders tool.
+            
+            IMPORTANT: 
+            - Today is \(Date().formatted(date: .complete, time: .omitted))
+            - Current time is \(Date().formatted(date: .omitted, time: .standard))
+            - User's timezone is \(TimeZone.current.identifier)
+            - When parsing dates from natural language, consider relative terms like "tomorrow", "next week", etc.
+            - For priorities, support: none, low, medium, high, and ASAP
+            - Be helpful in interpreting the user's intent and provide clear confirmation of actions taken
+            - When confirming reminder creation or updates, DO NOT mention the reminder ID - just confirm the action, title, date/time, and priority
+            """
+            
+            self.session = LanguageModelSession(
+                tools: [remindersTool],
+                instructions: Instructions(remindersInstructions)
+            )
+        } else {
+            // Reset session to default instructions without tools
+            self.session = LanguageModelSession(
+                instructions: Instructions(instructions)
+            )
+        }
+    }
+    
+    // MARK: - Reminders Context
+    
+    @MainActor
+    func updateRemindersContext() {
+        hasRemindersContext = true
+        remindersTool = RemindersTool()
+        
+        // Build tools array with all active tools
+        var tools: [any Tool] = []
+        if let calendarTool = calendarTool {
+            tools.append(calendarTool)
+        }
+        tools.append(remindersTool!)
+        
+        // Build combined instructions
+        var combinedInstructions = "You are a helpful, friendly AI assistant with access to the user's reminders."
+        
+        if hasCalendarContext {
+            combinedInstructions += " You also have access to the user's calendar."
+        }
+        
+        combinedInstructions += """
+         
+        You can help create, manage, and query reminders based on natural language requests.
+        When the user asks about their reminders or wants to create/manage reminders, use the manageReminders tool.
+        """
+        
+        if hasCalendarContext {
+            combinedInstructions += """
+            
+            You can also help manage calendar events, check schedules, and provide information about upcoming events.
+            """
+        }
+        
+        combinedInstructions += """
+        
+        
+        IMPORTANT: 
+        - Today is \(Date().formatted(date: .complete, time: .omitted))
+        - Current time is \(Date().formatted(date: .omitted, time: .standard))
+        - User's timezone is \(TimeZone.current.identifier)
+        
+        For reminders:
+        - When parsing dates from natural language, consider relative terms like "tomorrow", "next week", etc.
+        - For priorities, support: none, low, medium, high, and ASAP
+        - Be helpful in interpreting the user's intent and provide clear confirmation of actions taken
+        - When confirming reminder creation or updates, DO NOT mention the reminder ID - just confirm the action, title, date/time, and priority
+        """
+        
+        if hasCalendarContext {
+            combinedInstructions += """
+            
+            
+            For calendar queries:
+            - When user asks for a specific day (like "Monday"), calculate the correct daysAhead value to reach that day
+            - For example, if today is Friday and user asks for Monday, that's 3 days ahead, not 1
+            - The query action uses daysAhead parameter which counts from today
+            - Always verify you're calculating the correct number of days to the requested date
+            """
+        }
+        
         self.session = LanguageModelSession(
-            instructions: Instructions(instructions)
+            tools: tools,
+            instructions: Instructions(combinedInstructions)
         )
+    }
+    
+    @MainActor
+    func removeRemindersContext() {
+        hasRemindersContext = false
+        remindersTool = nil
+        
+        // If calendar context is still active, keep the calendar tool
+        if hasCalendarContext, let calendarTool = calendarTool {
+            let calendarInstructions = """
+            You are a helpful, friendly AI assistant with access to the user's calendar. 
+            You can help manage calendar events, check schedules, and provide information about upcoming events.
+            When the user asks about their calendar, schedule, or events, use the manageCalendar tool to access their calendar data.
+            Always be specific about dates and times when discussing calendar events.
+            
+            IMPORTANT: When querying events:
+            - Today is \(Date().formatted(date: .complete, time: .omitted))
+            - When user asks for a specific day (like "Monday"), calculate the correct daysAhead value to reach that day
+            - For example, if today is Friday and user asks for Monday, that's 3 days ahead, not 1
+            - The query action uses daysAhead parameter which counts from today
+            - Always verify you're calculating the correct number of days to the requested date
+            """
+            
+            self.session = LanguageModelSession(
+                tools: [calendarTool],
+                instructions: Instructions(calendarInstructions)
+            )
+        } else {
+            // Reset session to default instructions without tools
+            self.session = LanguageModelSession(
+                instructions: Instructions(instructions)
+            )
+        }
     }
 
     // MARK: - Public Methods
@@ -158,29 +322,74 @@ final class ChatViewModel {
         sessionCount = 1
         feedbackState.removeAll()
         
+        // Rebuild session with active contexts
+        var tools: [any Tool] = []
+        var contextInstructions = instructions
+        
         if hasCalendarContext, let calendarTool = calendarTool {
-            let calendarInstructions = """
-            You are a helpful, friendly AI assistant with access to the user's calendar. 
-            You can help manage calendar events, check schedules, and provide information about upcoming events.
-            When the user asks about their calendar, schedule, or events, use the manageCalendar tool to access their calendar data.
-            Always be specific about dates and times when discussing calendar events.
-            
-            IMPORTANT: When querying events:
-            - Today is \(Date().formatted(date: .complete, time: .omitted))
-            - When user asks for a specific day (like "Monday"), calculate the correct daysAhead value to reach that day
-            - For example, if today is Friday and user asks for Monday, that's 3 days ahead, not 1
-            - The query action uses daysAhead parameter which counts from today
-            - Always verify you're calculating the correct number of days to the requested date
-            """
-            session = LanguageModelSession(
-                tools: [calendarTool],
-                instructions: Instructions(calendarInstructions)
-            )
-        } else {
-            session = LanguageModelSession(
-                instructions: Instructions(instructions)
-            )
+            tools.append(calendarTool)
         }
+        
+        if hasRemindersContext, let remindersTool = remindersTool {
+            tools.append(remindersTool)
+        }
+        
+        // Build combined instructions if we have any tools
+        if !tools.isEmpty {
+            var combinedInstructions = "You are a helpful, friendly AI assistant"
+            
+            if hasCalendarContext {
+                combinedInstructions += " with access to the user's calendar. You can help manage calendar events, check schedules, and provide information about upcoming events."
+            }
+            
+            if hasRemindersContext {
+                if hasCalendarContext {
+                    combinedInstructions += " You also have"
+                } else {
+                    combinedInstructions += " with"
+                }
+                combinedInstructions += " access to the user's reminders. You can help create, manage, and query reminders based on natural language requests."
+            }
+            
+            combinedInstructions += """
+            
+            
+            IMPORTANT:
+            - Today is \(Date().formatted(date: .complete, time: .omitted))
+            - Current time is \(Date().formatted(date: .omitted, time: .standard))
+            - User's timezone is \(TimeZone.current.identifier)
+            """
+            
+            if hasCalendarContext {
+                combinedInstructions += """
+                
+                
+                For calendar queries:
+                - When user asks for a specific day (like "Monday"), calculate the correct daysAhead value to reach that day
+                - For example, if today is Friday and user asks for Monday, that's 3 days ahead, not 1
+                - The query action uses daysAhead parameter which counts from today
+                - Always verify you're calculating the correct number of days to the requested date
+                """
+            }
+            
+            if hasRemindersContext {
+                combinedInstructions += """
+                
+                
+                For reminders:
+                - When parsing dates from natural language, consider relative terms like "tomorrow", "next week", etc.
+                - For priorities, support: none, low, medium, high, and ASAP
+                - Be helpful in interpreting the user's intent and provide clear confirmation of actions taken
+                """
+            }
+            
+            contextInstructions = combinedInstructions
+        }
+        
+        session = LanguageModelSession(
+            tools: tools,
+            instructions: Instructions(contextInstructions)
+        )
     }
     
     @MainActor

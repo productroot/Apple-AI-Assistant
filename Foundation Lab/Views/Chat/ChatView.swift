@@ -20,16 +20,19 @@ struct ChatView: View {
     
     enum ChatContext: String, CaseIterable {
         case calendar = "Calendar"
+        case reminders = "Reminders"
         
         var icon: String {
             switch self {
             case .calendar: return "calendar"
+            case .reminders: return "checklist"
             }
         }
         
         var description: String {
             switch self {
             case .calendar: return "Access calendar events"
+            case .reminders: return "Access and manage reminders"
             }
         }
     }
@@ -50,11 +53,19 @@ struct ChatView: View {
                             Button {
                                 if selectedContext == context {
                                     selectedContext = nil
-                                    viewModel.removeCalendarContext()
+                                    switch context {
+                                    case .calendar:
+                                        viewModel.removeCalendarContext()
+                                    case .reminders:
+                                        viewModel.removeRemindersContext()
+                                    }
                                 } else {
                                     selectedContext = context
-                                    if context == .calendar {
+                                    switch context {
+                                    case .calendar:
                                         viewModel.updateCalendarContext()
+                                    case .reminders:
+                                        viewModel.updateRemindersContext()
                                     }
                                 }
                             } label: {
