@@ -280,7 +280,7 @@ struct TaskDetailView: View {
             .onAppear {
                 loadMentionedContacts()
             }
-            .onChange(of: isEditing) { newValue in
+            .onChange(of: isEditing) { oldValue, newValue in
                 if newValue {
                     mentionedContacts = loadedContacts
                 } else {
@@ -388,34 +388,30 @@ struct TaskDetailView: View {
         print("📱 Loading \(task.mentionedContactIds.count) mentioned contacts")
         
         Task {
-            do {
-                let store = CNContactStore()
-                let keysToFetch = [
-                    CNContactGivenNameKey,
-                    CNContactFamilyNameKey,
-                    CNContactEmailAddressesKey,
-                    CNContactPhoneNumbersKey,
-                    CNContactImageDataKey,
-                    CNContactOrganizationNameKey
-                ] as [CNKeyDescriptor]
-                
-                var contacts: [CNContact] = []
-                
-                for contactId in task.mentionedContactIds {
-                    do {
-                        let contact = try store.unifiedContact(withIdentifier: contactId, keysToFetch: keysToFetch)
-                        contacts.append(contact)
-                    } catch {
-                        print("❌ Failed to load contact with ID: \(contactId)")
-                    }
+            let store = CNContactStore()
+            let keysToFetch = [
+                CNContactGivenNameKey,
+                CNContactFamilyNameKey,
+                CNContactEmailAddressesKey,
+                CNContactPhoneNumbersKey,
+                CNContactImageDataKey,
+                CNContactOrganizationNameKey
+            ] as [CNKeyDescriptor]
+            
+            var contacts: [CNContact] = []
+            
+            for contactId in task.mentionedContactIds {
+                do {
+                    let contact = try store.unifiedContact(withIdentifier: contactId, keysToFetch: keysToFetch)
+                    contacts.append(contact)
+                } catch {
+                    print("❌ Failed to load contact with ID: \(contactId)")
                 }
-                
-                await MainActor.run {
-                    loadedContacts = contacts
-                    print("✅ Loaded \(contacts.count) contacts")
-                }
-            } catch {
-                print("❌ Error loading contacts: \(error)")
+            }
+            
+            await MainActor.run {
+                loadedContacts = contacts
+                print("✅ Loaded \(contacts.count) contacts")
             }
         }
     }

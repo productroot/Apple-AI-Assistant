@@ -18,6 +18,8 @@ struct TasksView: View {
     @State private var projectToDelete: Project?
     @State private var editMode: EditMode = .inactive
     @State private var showingOptimization = false
+    @State private var showingWorkloadBalance = false
+    @State private var showingRecurrenceSuggestions = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
@@ -49,10 +51,26 @@ struct TasksView: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    showingOptimization = true
+                Menu {
+                    Button {
+                        showingOptimization = true
+                    } label: {
+                        Label("Optimize Tasks", systemImage: "sparkles")
+                    }
+                    
+                    Button {
+                        showingWorkloadBalance = true
+                    } label: {
+                        Label("Workload Balance", systemImage: "chart.bar.fill")
+                    }
+                    
+                    Button {
+                        showingRecurrenceSuggestions = true
+                    } label: {
+                        Label("Detect Patterns", systemImage: "arrow.clockwise")
+                    }
                 } label: {
-                    Label("AI Optimize", systemImage: "sparkles")
+                    Label("AI Tools", systemImage: "sparkles")
                 }
             }
             
@@ -88,6 +106,12 @@ struct TasksView: View {
         }
         .sheet(isPresented: $showingOptimization) {
             TaskOptimizationView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showingWorkloadBalance) {
+            WorkloadBalanceView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showingRecurrenceSuggestions) {
+            RecurrenceSuggestionView(viewModel: viewModel)
         }
     }
     

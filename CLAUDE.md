@@ -179,3 +179,27 @@ Tools extend AI capabilities by conforming to `Tool` protocol:
   - 🔄 for sync operations
   - ❌ for errors
   - ✅ for success confirmations
+
+### Help Documentation Updates
+- **EVERY new feature or feature change MUST include help documentation updates**
+- When adding new functionality:
+  - Update `Foundation Lab/Views/Settings/HelpTopicsView.swift` for general features
+  - Update `Foundation Lab/Views/Settings/AIHelpView.swift` for AI-powered features
+- Documentation must include:
+  - Overview of the feature
+  - Step-by-step instructions
+  - Tips and best practices
+  - Common issues and solutions
+- Example: When adding a new AI feature, add a new `AIFeatureCard` in AIHelpView
+- Example: When modifying task behavior, update the relevant section in HelpTopicsView's `helpContent`
+
+### Git Commit and Push Restrictions
+- **NEVER commit and push changes without explicit user request**
+- Only perform git operations when the user explicitly asks:
+  - "Commit changes" or "Please commit"
+  - "Push changes" or "Push to remote"
+  - "Commit and push"
+- If changes are ready but user hasn't requested commit:
+  - Inform user that changes are complete
+  - Wait for explicit commit/push instruction
+- This ensures user maintains full control over version history

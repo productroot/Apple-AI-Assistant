@@ -747,34 +747,30 @@ struct TaskRowView: View {
         }
         
         Task {
-            do {
-                let store = CNContactStore()
-                let keysToFetch = [
-                    CNContactGivenNameKey,
-                    CNContactFamilyNameKey,
-                    CNContactImageDataKey,
-                    CNContactOrganizationNameKey,
-                    CNContactPhoneNumbersKey,
-                    CNContactEmailAddressesKey
-                ] as [CNKeyDescriptor]
-                
-                var contacts: [CNContact] = []
-                
-                for contactId in task.mentionedContactIds {
-                    do {
-                        let contact = try store.unifiedContact(withIdentifier: contactId, keysToFetch: keysToFetch)
-                        contacts.append(contact)
-                    } catch {
-                        print("❌ Failed to load contact with ID: \(contactId)")
-                    }
+            let store = CNContactStore()
+            let keysToFetch = [
+                CNContactGivenNameKey,
+                CNContactFamilyNameKey,
+                CNContactImageDataKey,
+                CNContactOrganizationNameKey,
+                CNContactPhoneNumbersKey,
+                CNContactEmailAddressesKey
+            ] as [CNKeyDescriptor]
+            
+            var contacts: [CNContact] = []
+            
+            for contactId in task.mentionedContactIds {
+                do {
+                    let contact = try store.unifiedContact(withIdentifier: contactId, keysToFetch: keysToFetch)
+                    contacts.append(contact)
+                } catch {
+                    print("❌ Failed to load contact with ID: \(contactId)")
                 }
-                
-                await MainActor.run {
-                    loadedContacts = contacts
-                    print("📱 Loaded \(contacts.count) contacts for task row")
-                }
-            } catch {
-                print("❌ Error loading contacts: \(error)")
+            }
+            
+            await MainActor.run {
+                loadedContacts = contacts
+                print("📱 Loaded \(contacts.count) contacts for task row")
             }
         }
     }

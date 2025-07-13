@@ -873,4 +873,67 @@ final class TasksViewModel {
             throw error
         }
     }
+    
+    // MARK: - Workload Analysis
+    
+    @MainActor
+    func generateWorkloadSuggestions(
+        workloads: [WorkloadAnalyzer.DailyWorkload],
+        insights: WorkloadAnalyzer.WorkloadInsight
+    ) async throws -> String {
+        print("🤖 Generating workload analysis suggestions")
+        
+        let prompt = AIPrompts.workloadAnalysis(
+            workloads: workloads,
+            insights: insights
+        )
+        
+        do {
+            let session = LanguageModelSession()
+            let response = try await session.respond(to: Prompt(prompt))
+            
+            print("✅ Workload analysis completed")
+            return response.content
+        } catch {
+            print("❌ Failed to generate workload suggestions: \(error)")
+            throw error
+        }
+    }
+    
+    // MARK: - Recurrence Pattern Analysis
+    
+    @MainActor
+    func analyzeRecurrencePatterns(
+        _ patterns: [RecurrencePatternDetector.PatternMatch]
+    ) async throws -> String {
+        print("🤖 Analyzing recurrence patterns with AI")
+        
+        // Convert patterns to a format suitable for the prompt
+        let completedTasks = patterns.flatMap { pattern in
+            pattern.occurrences.map { date in
+                (
+                    title: pattern.taskTitle,
+                    completedAt: date,
+                    projectName: nil as String?,
+                    tags: [] as [String]
+                )
+            }
+        }
+        
+        let prompt = AIPrompts.recurrencePatternDetection(
+            completedTasks: completedTasks,
+            timeFrame: "detected patterns"
+        )
+        
+        do {
+            let session = LanguageModelSession()
+            let response = try await session.respond(to: Prompt(prompt))
+            
+            print("✅ Recurrence pattern analysis completed")
+            return response.content
+        } catch {
+            print("❌ Failed to analyze recurrence patterns: \(error)")
+            throw error
+        }
+    }
 }

@@ -25,111 +25,198 @@ struct SettingsView: View {
   @State private var iCloudEnabled = false
   @State private var isSyncing = false
   
+  @ViewBuilder
+  private var webSearchSection: some View {
+    Section {
+      VStack(alignment: .leading, spacing: 8) {
+        Text("Exa Web Search")
+          .font(.headline)
+        
+        Text("Configure your Exa API key to enable web search functionality.")
+          .font(.caption)
+          .foregroundColor(.secondary)
+      }
+      .padding(.vertical, 4)
+      
+      VStack(alignment: .leading, spacing: 12) {
+        Text("API Key")
+          .font(.subheadline)
+          .fontWeight(.medium)
+        
+        SecureField("Enter your Exa API key", text: $tempAPIKey)
+          .textFieldStyle(.roundedBorder)
+          .onAppear {
+            tempAPIKey = exaAPIKey
+          }
+        
+        HStack {
+          Button("Save") {
+            saveAPIKey()
+          }
+          .buttonStyle(.glassProminent)
+          .disabled(tempAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+          
+          if !exaAPIKey.isEmpty {
+            Button("Clear") {
+              clearAPIKey()
+            }
+            .buttonStyle(.glassProminent)
+            .tint(.secondary)
+            .foregroundColor(.red)
+          }
+        }
+      }
+      
+      if !exaAPIKey.isEmpty {
+        Text("✓ API key configured")
+          .font(.caption)
+          .foregroundColor(.secondary)
+      }
+      
+    } header: {
+      Text("Web Search Configuration")
+    } footer: {
+      VStack(alignment: .leading, spacing: 8) {
+        Text("Get your free Exa API key:")
+        Link("https://exa.ai/api", destination: URL(string: "https://exa.ai/api")!)
+          .font(.caption)
+        
+        Text("The API key is stored on the device and only used for web search requests.")
+          .font(.caption)
+          .foregroundColor(.secondary)
+      }
+    }
+  }
+  
+  @ViewBuilder
+  private var iCloudSection: some View {
+    Section {
+      Toggle("Enable iCloud Sync", isOn: $iCloudEnabled)
+        .onChange(of: iCloudEnabled) { _, newValue in
+          iCloudService.shared.iCloudEnabled = newValue
+        }
+      
+      if iCloudEnabled {
+        VStack(alignment: .leading, spacing: 12) {
+          if let lastSync = iCloudService.shared.lastSyncDate {
+            HStack {
+              Text("Last synced")
+              Spacer()
+              Text(lastSync, style: .relative)
+                .foregroundColor(.secondary)
+            }
+            .font(.caption)
+          }
+          
+          if isSyncing {
+            HStack {
+              ProgressView()
+                .scaleEffect(0.8)
+              Text("Syncing...")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            }
+          }
+          
+          Button("Sync Now") {
+            tasksViewModel.syncWithiCloud()
+          }
+          .buttonStyle(.glassProminent)
+          .disabled(isSyncing)
+        }
+      }
+    } header: {
+      Text("iCloud Sync")
+    } footer: {
+      Text("Enable iCloud sync to keep your tasks backed up and synchronized across your devices.")
+        .font(.caption)
+        .foregroundColor(.secondary)
+    }
+  }
+  
+  @ViewBuilder
+  private var dataManagementSection: some View {
+    Section {
+      Button(action: {
+        showingExportConfirmation = true
+      }) {
+        HStack {
+          Image(systemName: "icloud.and.arrow.up")
+          Text("Export to iCloud")
+        }
+      }
+      .disabled(isProcessing || !iCloudEnabled)
+      
+      Button(action: {
+        showingImportConfirmation = true
+      }) {
+        HStack {
+          Image(systemName: "icloud.and.arrow.down")
+          Text("Import from iCloud")
+        }
+      }
+      .disabled(isProcessing || !iCloudEnabled)
+      
+      Button(action: {
+        showingClearDataConfirmation = true
+      }) {
+        HStack {
+          Image(systemName: "trash")
+          Text("Clear All Data")
+        }
+        .foregroundColor(.red)
+      }
+      .disabled(isProcessing)
+    } header: {
+      Text("Data Management")
+    } footer: {
+      Text("Export creates a backup of your tasks to iCloud. Import replaces local data with iCloud data. Clear removes all tasks from both local storage and iCloud.")
+        .font(.caption)
+        .foregroundColor(.secondary)
+    }
+  }
+  
+  @ViewBuilder
+  private var helpSection: some View {
+    Section {
+      NavigationLink(destination: AIHelpView()) {
+        HStack {
+          Image(systemName: "sparkles")
+            .foregroundColor(.purple)
+          Text("AI Features Guide")
+          Spacer()
+          Image(systemName: "chevron.right")
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+        }
+      }
+      
+      NavigationLink(destination: HelpTopicsView()) {
+        HStack {
+          Image(systemName: "questionmark.circle")
+            .foregroundColor(.blue)
+          Text("Help Topics")
+          Spacer()
+          Image(systemName: "chevron.right")
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+        }
+      }
+    } header: {
+      Text("Help")
+    } footer: {
+      Text("Learn about AI-powered features and get help with using the app.")
+        .font(.caption)
+        .foregroundColor(.secondary)
+    }
+  }
+  
   var body: some View {
     NavigationStack {
       Form {
-        Section {
-          VStack(alignment: .leading, spacing: 8) {
-            Text("Exa Web Search")
-              .font(.headline)
-            
-            Text("Configure your Exa API key to enable web search functionality.")
-              .font(.caption)
-              .foregroundColor(.secondary)
-          }
-          .padding(.vertical, 4)
-          
-          VStack(alignment: .leading, spacing: 12) {
-            Text("API Key")
-              .font(.subheadline)
-              .fontWeight(.medium)
-            
-            SecureField("Enter your Exa API key", text: $tempAPIKey)
-              .textFieldStyle(.roundedBorder)
-              .onAppear {
-                tempAPIKey = exaAPIKey
-              }
-            
-            HStack {
-              Button("Save") {
-                saveAPIKey()
-              }
-              .buttonStyle(.glassProminent)
-              .disabled(tempAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-              
-              if !exaAPIKey.isEmpty {
-                Button("Clear") {
-                  clearAPIKey()
-                }
-                .buttonStyle(.glassProminent)
-            .tint(.secondary)
-                .foregroundColor(.red)
-              }
-            }
-          }
-          
-          if !exaAPIKey.isEmpty {
-            Text("✓ API key configured")
-              .font(.caption)
-              .foregroundColor(.secondary)
-          }
-          
-        } header: {
-          Text("Web Search Configuration")
-        } footer: {
-          VStack(alignment: .leading, spacing: 8) {
-            Text("Get your free Exa API key:")
-            Link("https://exa.ai/api", destination: URL(string: "https://exa.ai/api")!)
-              .font(.caption)
-            
-            Text("The API key is stored on the device and only used for web search requests.")
-              .font(.caption)
-              .foregroundColor(.secondary)
-          }
-        }
+        webSearchSection
         
-        Section {
-          Toggle("Enable iCloud Sync", isOn: $iCloudEnabled)
-            .onChange(of: iCloudEnabled) { _, newValue in
-              iCloudService.shared.iCloudEnabled = newValue
-            }
-          
-          if iCloudEnabled {
-            VStack(alignment: .leading, spacing: 12) {
-              if let lastSync = iCloudService.shared.lastSyncDate {
-                HStack {
-                  Text("Last synced")
-                  Spacer()
-                  Text(lastSync, style: .relative)
-                    .foregroundColor(.secondary)
-                }
-                .font(.caption)
-              }
-              
-              if isSyncing {
-                HStack {
-                  ProgressView()
-                    .scaleEffect(0.8)
-                  Text("Syncing...")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                }
-              }
-              
-              Button("Sync Now") {
-                tasksViewModel.syncWithiCloud()
-              }
-              .buttonStyle(.glassProminent)
-              .disabled(isSyncing)
-            }
-          }
-        } header: {
-          Text("iCloud Sync")
-        } footer: {
-          Text("Enable iCloud sync to keep your tasks backed up and synchronized across your devices.")
-            .font(.caption)
-            .foregroundColor(.secondary)
-        }
+        iCloudSection
         
         Section {
           Toggle("Create Tasks from Chat Reminders", isOn: $createTasksFromChatReminders)
@@ -141,44 +228,9 @@ struct SettingsView: View {
             .foregroundColor(.secondary)
         }
         
-        Section {
-          Button(action: {
-            showingExportConfirmation = true
-          }) {
-            HStack {
-              Image(systemName: "icloud.and.arrow.up")
-              Text("Export to iCloud")
-            }
-          }
-          .disabled(isProcessing || !iCloudEnabled)
-          
-          Button(action: {
-            showingImportConfirmation = true
-          }) {
-            HStack {
-              Image(systemName: "icloud.and.arrow.down")
-              Text("Import from iCloud")
-            }
-          }
-          .disabled(isProcessing || !iCloudEnabled)
-          
-          Button(action: {
-            showingClearDataConfirmation = true
-          }) {
-            HStack {
-              Image(systemName: "trash")
-              Text("Clear All Data")
-            }
-            .foregroundColor(.red)
-          }
-          .disabled(isProcessing)
-        } header: {
-          Text("Data Management")
-        } footer: {
-          Text("Export creates a backup of your tasks to iCloud. Import replaces local data with iCloud data. Clear removes all tasks from both local storage and iCloud.")
-            .font(.caption)
-            .foregroundColor(.secondary)
-        }
+        dataManagementSection
+        
+        helpSection
         
         Section {
           HStack {

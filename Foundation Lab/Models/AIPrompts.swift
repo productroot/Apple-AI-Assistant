@@ -254,6 +254,116 @@ enum AIPrompts {
         return prompt
     }
     
+    // MARK: - Workload Analysis
+    
+    /// Generates a prompt for analyzing workload distribution and providing suggestions
+    /// - Parameters:
+    ///   - workloads: Array of daily workload data
+    ///   - insights: Analyzed insights from the workload data
+    /// - Returns: A formatted prompt string
+    static func workloadAnalysis(
+        workloads: [WorkloadAnalyzer.DailyWorkload],
+        insights: WorkloadAnalyzer.WorkloadInsight
+    ) -> String {
+        var prompt = """
+        Analyze this workload distribution and provide actionable suggestions for better task management.
+        
+        Current Situation:
+        - Average workload score: \(String(format: "%.0f", insights.averageWorkloadScore))/100
+        - Overloaded days: \(insights.overloadedDays.count)
+        - Days with light workload: \(insights.lightDays.count)
+        
+        """
+        
+        if let peakDay = insights.peakDay {
+            prompt += """
+            
+            Peak workload day: \(peakDay.date.formatted(date: .complete, time: .omitted))
+            - Tasks: \(peakDay.taskCount)
+            - Total duration: \(WorkloadAnalyzer.formatDuration(peakDay.totalEstimatedDuration))
+            - High priority tasks: \(peakDay.highPriorityCount)
+            
+            """
+        }
+        
+        if !insights.overloadedDays.isEmpty {
+            prompt += "\nOverloaded days details:\n"
+            for day in insights.overloadedDays.prefix(3) {
+                prompt += """
+                - \(day.date.formatted(date: .abbreviated, time: .omitted)): \(day.taskCount) tasks, \(WorkloadAnalyzer.formatDuration(day.totalEstimatedDuration))
+                
+                """
+            }
+        }
+        
+        prompt += """
+        
+        Provide:
+        1. Analysis of the workload pattern
+        2. Specific recommendations for balancing the workload
+        3. Time management strategies
+        4. Warning signs to watch for
+        5. Productivity tips based on the distribution
+        
+        Keep suggestions practical and actionable. Focus on sustainable productivity.
+        """
+        
+        return prompt
+    }
+    
+    // MARK: - Recurrence Pattern Detection
+    
+    /// Generates a prompt for detecting patterns in completed tasks
+    /// - Parameters:
+    ///   - completedTasks: Array of completed tasks with their completion dates
+    ///   - timeFrame: Time frame to analyze (e.g., "last 30 days")
+    /// - Returns: A formatted prompt string
+    static func recurrencePatternDetection(
+        completedTasks: [(title: String, completedAt: Date, projectName: String?, tags: [String])],
+        timeFrame: String
+    ) -> String {
+        var prompt = """
+        Analyze these completed tasks from the \(timeFrame) to identify potential recurring patterns.
+        
+        COMPLETED TASKS:
+        """
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .short
+        dateFormatter.timeStyle = .none
+        
+        for task in completedTasks {
+            prompt += "\n- \"\(task.title)\" completed on \(dateFormatter.string(from: task.completedAt))"
+            if let project = task.projectName {
+                prompt += " (Project: \(project))"
+            }
+            if !task.tags.isEmpty {
+                prompt += " [Tags: \(task.tags.joined(separator: ", "))]"
+            }
+        }
+        
+        prompt += """
+        
+        
+        ANALYSIS REQUIRED:
+        1. Identify tasks that appear to be recurring (similar titles, regular intervals)
+        2. Detect weekly patterns (e.g., "Weekly team meeting" every Monday)
+        3. Find monthly patterns (e.g., "Pay rent" on the 1st of each month)
+        4. Spot project-related patterns (e.g., sprint reviews, status updates)
+        5. Identify context-based patterns (e.g., weekend chores, workday routines)
+        
+        For each detected pattern, provide:
+        - Task name pattern
+        - Suggested recurrence rule (daily, weekly, monthly, etc.)
+        - Confidence level (high, medium, low)
+        - Reasoning for the suggestion
+        
+        Focus on patterns that would genuinely help the user by automating task creation.
+        """
+        
+        return prompt
+    }
+    
     // MARK: - Future Prompts
     // Add more prompt generation methods here as new AI features are added
 }
