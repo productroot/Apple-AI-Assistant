@@ -14,10 +14,10 @@ final class OptimizationFeedbackService {
     static let shared = OptimizationFeedbackService()
     
     // MARK: - Properties
-    private var feedbackHistory: [OptimizationFeedback] = []
-    private var userPreferences: [String] = []
-    private let maxHistorySize = 500
-    private let maxPreferences = 20
+    internal var feedbackHistory: [OptimizationFeedback] = []
+    internal var userPreferences: [String] = []
+    internal let maxHistorySize = 500
+    internal let maxPreferences = 20
     
     // MARK: - Persistence Keys
     private let historyKey = "com.foundationlab.optimizationHistory"
@@ -180,7 +180,7 @@ final class OptimizationFeedbackService {
     
     // MARK: - Persistence
     
-    private func saveData() {
+    internal func saveData() {
         do {
             let encoder = JSONEncoder()
             

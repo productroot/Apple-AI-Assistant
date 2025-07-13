@@ -14,8 +14,8 @@ final class DurationLearningService {
     static let shared = DurationLearningService()
     
     // MARK: - Properties
-    private var durationHistory: [DurationRecord] = []
-    private let maxHistorySize = 1000
+    internal var durationHistory: [DurationRecord] = []
+    internal let maxHistorySize = 1000
     private let similarityThreshold = 0.7
     
     // MARK: - Persistence Keys
@@ -198,7 +198,7 @@ final class DurationLearningService {
     
     // MARK: - Persistence
     
-    private func saveHistory() {
+    internal func saveHistory() {
         do {
             let data = try JSONEncoder().encode(durationHistory)
             UserDefaults.standard.set(data, forKey: historyKey)

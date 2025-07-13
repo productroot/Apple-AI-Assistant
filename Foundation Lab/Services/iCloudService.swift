@@ -110,6 +110,19 @@ final class iCloudService {
         
         var records: [CKRecord] = []
         
+        // Save AI Learning Data
+        let aiLearningData = AILearningDataManager.shared.collectLearningData()
+        let aiRecordID = CKRecord.ID(recordName: "AILearningData", zoneID: customZoneID)
+        let aiRecord = CKRecord(recordType: "AILearning", recordID: aiRecordID)
+        
+        if let encodedData = try? JSONEncoder().encode(aiLearningData) {
+            aiRecord["data"] = encodedData
+            aiRecord["lastUpdated"] = aiLearningData.lastUpdated
+            aiRecord["version"] = aiLearningData.version
+            records.append(aiRecord)
+            print("📊 Prepared AI learning data for iCloud sync")
+        }
+        
         for area in areas {
             let recordID = CKRecord.ID(recordName: area.id.uuidString, zoneID: customZoneID)
             let record = CKRecord(recordType: "Area", recordID: recordID)
@@ -220,6 +233,8 @@ final class iCloudService {
         }
         
         // Process fetched records
+        var aiLearningRecord: CKRecord?
+        
         for record in fetchedRecords {
             switch record.recordType {
             case "Area":
@@ -230,6 +245,8 @@ final class iCloudService {
                 if let project = recordToProject(record) {
                     projects.append(project)
                 }
+            case "AILearning":
+                aiLearningRecord = record
             case recordType:
                 if let task = recordToTask(record) {
                     tasks.append(task)
@@ -237,6 +254,14 @@ final class iCloudService {
             default:
                 break
             }
+        }
+        
+        // Process AI Learning Data
+        if let aiRecord = aiLearningRecord,
+           let encodedData = aiRecord["data"] as? Data,
+           let aiLearningData = try? JSONDecoder().decode(AILearningData.self, from: encodedData) {
+            AILearningDataManager.shared.distributeLearningData(aiLearningData)
+            print("📊 AI learning data restored from iCloud")
         }
         
         await MainActor.run {
@@ -376,6 +401,17 @@ final class iCloudService {
         record["createdAt"] = task.createdAt
         record["modifiedAt"] = Date()
         
+        // Add recurrence fields
+        record["recurrenceRule"] = task.recurrenceRule?.rawValue
+        if let customRecurrence = task.customRecurrence,
+           let customData = try? JSONEncoder().encode(customRecurrence) {
+            record["customRecurrence"] = customData
+        }
+        record["parentTaskId"] = task.parentTaskId?.uuidString
+        
+        // Add duration tracking field
+        record["startedAt"] = task.startedAt
+        
         if !task.checklistItems.isEmpty {
             let checklistData = try? JSONEncoder().encode(task.checklistItems)
             record["checklistItems"] = checklistData
@@ -415,6 +451,26 @@ final class iCloudService {
         task.isCompleted = (record["isCompleted"] as? Int ?? 0) == 1
         task.completionDate = record["completionDate"] as? Date
         task.createdAt = record["createdAt"] as? Date ?? Date()
+        
+        // Read recurrence fields
+        if let recurrenceRuleString = record["recurrenceRule"] as? String {
+            task.recurrenceRule = RecurrenceRule(rawValue: recurrenceRuleString)
+        }
+        
+        if let customRecurrenceData = record["customRecurrence"] as? Data {
+            do {
+                task.customRecurrence = try JSONDecoder().decode(CustomRecurrence.self, from: customRecurrenceData)
+            } catch {
+                print("Failed to decode custom recurrence: \(error)")
+            }
+        }
+        
+        if let parentTaskIdString = record["parentTaskId"] as? String {
+            task.parentTaskId = UUID(uuidString: parentTaskIdString)
+        }
+        
+        // Read duration tracking field
+        task.startedAt = record["startedAt"] as? Date
         
         if let checklistData = record["checklistItems"] as? Data {
             do {
