@@ -6,9 +6,12 @@
 //
 
 import SwiftUI
+import Contacts
 
 struct AddTaskView: View {
     var viewModel: TasksViewModel
+    var preselectedProject: Project? = nil
+    var preselectedArea: Area? = nil
     @Environment(\.dismiss) private var dismiss
     
     @State private var title = ""
@@ -20,16 +23,25 @@ struct AddTaskView: View {
     @State private var selectedArea: Area?
     @State private var tags: String = ""
     @State private var showDatePicker = false
+    @State private var mentionedContacts: [CNContact] = []
     
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("New TodoTask", text: $title)
-                        .font(.headline)
+                    MentionableTextField(
+                        text: $title,
+                        mentionedContacts: $mentionedContacts,
+                        placeholder: "New TodoTask"
+                    )
+                    .font(.headline)
                     
-                    TextField("Notes", text: $notes, axis: .vertical)
-                        .lineLimit(3...6)
+                    MentionableTextEditor(
+                        text: $notes,
+                        mentionedContacts: $mentionedContacts,
+                        placeholder: "Notes"
+                    )
+                    .frame(minHeight: 80, maxHeight: 200)
                 }
                 
                 Section {
@@ -95,6 +107,24 @@ struct AddTaskView: View {
                     TextField("Tags (comma separated)", text: $tags)
                         .textInputAutocapitalization(.never)
                 }
+                
+                // Mentioned Contacts Section
+                if !mentionedContacts.isEmpty {
+                    Section("Mentioned Contacts") {
+                        ForEach(mentionedContacts, id: \.identifier) { contact in
+                            HStack {
+                                InteractiveContactView(contact: contact, style: .mention)
+                                Spacer()
+                                Button {
+                                    mentionedContacts.removeAll { $0.identifier == contact.identifier }
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
             }
             .navigationTitle("New TodoTask")
             .navigationBarTitleDisplayMode(.inline)
@@ -115,6 +145,16 @@ struct AddTaskView: View {
             .sheet(isPresented: $showDatePicker) {
                 DatePickerSheet(selectedDate: $scheduledDate)
             }
+            .onAppear {
+                if let preselectedProject {
+                    selectedProject = preselectedProject
+                    print("📋 Pre-selected project: \(preselectedProject.name)")
+                }
+                if let preselectedArea {
+                    selectedArea = preselectedArea
+                    print("📋 Pre-selected area: \(preselectedArea.name)")
+                }
+            }
         }
     }
     
@@ -129,10 +169,12 @@ struct AddTaskView: View {
             scheduledDate: scheduledDate,
             projectId: selectedProject?.id,
             areaId: selectedArea?.id,
-            priority: priority
+            priority: priority,
+            mentionedContactIds: mentionedContacts.map { $0.identifier }
         )
         
         viewModel.addTask(task)
+        print("✅ Added task with \(mentionedContacts.count) mentioned contacts")
         dismiss()
     }
 }

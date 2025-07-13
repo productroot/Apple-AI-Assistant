@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Contacts
 
 struct TaskRowView: View {
     @State var task: TodoTask
@@ -36,6 +37,8 @@ struct TaskRowView: View {
     @State private var isGeneratingDuration = false
     @State private var showDurationPicker = false
     @State private var showingDeleteAlert = false
+    @State private var loadedContacts: [CNContact] = []
+    @State private var editingMentionedContacts: [CNContact] = []
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
     @FocusState private var isNewChecklistItemFocused: Bool
@@ -79,11 +82,16 @@ struct TaskRowView: View {
         }
         .background(isSelected ? Color.blue.opacity(0.1) : Color.clear)
         .contentShape(Rectangle())
+        .onAppear {
+            loadMentionedContacts()
+        }
         .onTapGesture {
             if !isEditing && !task.isCompleted && !viewModel.isMultiSelectMode {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     isEditing = true
                     onEditingChanged?(true, task)
+                    // Load mentioned contacts for editing
+                    editingMentionedContacts = loadedContacts
                 }
                 // Don't focus automatically - let user tap to show keyboard
             } else if !isEditing {
@@ -230,10 +238,17 @@ struct TaskRowView: View {
             
             // Task content
             VStack(alignment: .leading, spacing: 4) {
-                Text(task.title)
-                    .font(.body)
-                    .strikethrough(task.isCompleted)
-                    .foregroundStyle(task.isCompleted ? .secondary : .primary)
+                if !task.mentionedContactIds.isEmpty && !loadedContacts.isEmpty {
+                    RichTextView(text: task.title, mentionedContacts: loadedContacts)
+                        .font(.body)
+                        .strikethrough(task.isCompleted)
+                        .foregroundStyle(task.isCompleted ? .secondary : .primary)
+                } else {
+                    Text(task.title)
+                        .font(.body)
+                        .strikethrough(task.isCompleted)
+                        .foregroundStyle(task.isCompleted ? .secondary : .primary)
+                }
                 
                 HStack(spacing: 8) {
                     if task.priority != .none {
@@ -314,10 +329,14 @@ struct TaskRowView: View {
              // Main editing area
              VStack(spacing: 16) {
                                  // Title Field
-                 TextField("Task Title", text: $editedTitle)
-                     .font(.body)
-                     .textFieldStyle(.plain)
-                     .focused($isTitleFocused)
+                 MentionableTextField(
+                     text: $editedTitle,
+                     mentionedContacts: $editingMentionedContacts,
+                     placeholder: "Task Title"
+                 )
+                 .font(.body)
+                 .textFieldStyle(.plain)
+                 .focused($isTitleFocused)
                      .submitLabel(.done)
                      .onSubmit {
                          isTitleFocused = false
@@ -336,11 +355,14 @@ struct TaskRowView: View {
                      }
                 
                                  // Notes Field
-                 TextField("Notes", text: $editedNotes, axis: .vertical)
-                     .font(.body)
-                     .textFieldStyle(.plain)
-                     .lineLimit(2...4)
-                     .focused($isNotesFocused)
+                 MentionableTextEditor(
+                     text: $editedNotes,
+                     mentionedContacts: $editingMentionedContacts,
+                     placeholder: "Notes"
+                 )
+                 .font(.body)
+                 .frame(minHeight: 60, maxHeight: 120)
+                 .focused($isNotesFocused)
                      .onSubmit {
                          isTitleFocused = false
                          isNotesFocused = false
@@ -461,6 +483,33 @@ struct TaskRowView: View {
                      Spacer()
                  }
                 
+                // Mentioned Contacts Section
+                if !editingMentionedContacts.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Mentioned Contacts", systemImage: "person.2")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(editingMentionedContacts, id: \.identifier) { contact in
+                                    HStack(spacing: 4) {
+                                        InteractiveContactView(contact: contact, style: .mention)
+                                        
+                                        Button {
+                                            editingMentionedContacts.removeAll { $0.identifier == contact.identifier }
+                                        } label: {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 // Checklist Section
                 if !task.checklistItems.isEmpty || isGeneratingChecklist {
                     VStack(alignment: .leading, spacing: 8) {
@@ -564,6 +613,7 @@ struct TaskRowView: View {
         updatedTask.priority = editedPriority
         updatedTask.scheduledDate = editedScheduledDate
         updatedTask.checklistItems = task.checklistItems // Save updated checklist items
+        updatedTask.mentionedContactIds = editingMentionedContacts.map { $0.identifier }
         updatedTask.recurrenceRule = editedRecurrenceRule
         updatedTask.customRecurrence = editedCustomRecurrence
         updatedTask.estimatedDuration = editedDuration
@@ -584,6 +634,9 @@ struct TaskRowView: View {
         withAnimation(.easeInOut(duration: 0.3)) {
             isEditing = false
             onEditingChanged?(false, task)
+            // Reload contacts after saving
+            loadedContacts = editingMentionedContacts
+            print("✅ Saved task with \(editingMentionedContacts.count) mentioned contacts")
         }
     }
     
@@ -683,6 +736,45 @@ struct TaskRowView: View {
                     isGeneratingDuration = false
                     print("❌ Failed to estimate duration: \(error)")
                 }
+            }
+        }
+    }
+    
+    private func loadMentionedContacts() {
+        guard !task.mentionedContactIds.isEmpty else {
+            loadedContacts = []
+            return
+        }
+        
+        Task {
+            do {
+                let store = CNContactStore()
+                let keysToFetch = [
+                    CNContactGivenNameKey,
+                    CNContactFamilyNameKey,
+                    CNContactImageDataKey,
+                    CNContactOrganizationNameKey,
+                    CNContactPhoneNumbersKey,
+                    CNContactEmailAddressesKey
+                ] as [CNKeyDescriptor]
+                
+                var contacts: [CNContact] = []
+                
+                for contactId in task.mentionedContactIds {
+                    do {
+                        let contact = try store.unifiedContact(withIdentifier: contactId, keysToFetch: keysToFetch)
+                        contacts.append(contact)
+                    } catch {
+                        print("❌ Failed to load contact with ID: \(contactId)")
+                    }
+                }
+                
+                await MainActor.run {
+                    loadedContacts = contacts
+                    print("📱 Loaded \(contacts.count) contacts for task row")
+                }
+            } catch {
+                print("❌ Error loading contacts: \(error)")
             }
         }
     }

@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
+import Contacts
 
 // MARK: - Recurrence Rule
 enum RecurrenceRule: String, CaseIterable, Codable, Sendable {
@@ -130,6 +131,9 @@ struct TodoTask: Identifiable, Hashable, Codable, Sendable {
     var parentTaskId: UUID? // For tracking the original recurring task
     var startedAt: Date? // For tracking actual duration
     var createdFromReminder: Bool = false // For tracking tasks created from chat reminders
+    var mentionedContactIds: [String] = [] // Contact identifiers for mentioned contacts
+    var titleMentions: [MentionPosition] = [] // Track where mentions appear in title
+    var notesMentions: [MentionPosition] = [] // Track where mentions appear in notes
     
     enum Priority: String, CaseIterable, Codable {
         case none = "none"
@@ -188,6 +192,13 @@ struct TodoTask: Identifiable, Hashable, Codable, Sendable {
             }
         }
     }
+}
+
+// MARK: - Mention Position
+struct MentionPosition: Codable, Hashable, Sendable {
+    let contactId: String
+    let placeholder: String // The text shown (e.g., "@John")
+    let range: NSRange
 }
 
 // MARK: - Checklist Item

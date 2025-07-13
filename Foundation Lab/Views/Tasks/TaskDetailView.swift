@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Contacts
 
 struct TaskDetailView: View {
     @State var task: TodoTask
@@ -18,6 +19,8 @@ struct TaskDetailView: View {
     @State private var isGeneratingChecklist = false
     @State private var showGenerationError = false
     @State private var generationError: String?
+    @State private var mentionedContacts: [CNContact] = []
+    @State private var loadedContacts: [CNContact] = []
     
     var body: some View {
         NavigationStack {
@@ -26,9 +29,13 @@ struct TaskDetailView: View {
                     // Title Section
                     VStack(alignment: .leading, spacing: 8) {
                         if isEditing {
-                            TextField("TodoTask Title", text: $task.title)
-                                .font(.title2)
-                                .textFieldStyle(.roundedBorder)
+                            MentionableTextField(
+                                text: $task.title,
+                                mentionedContacts: $mentionedContacts,
+                                placeholder: "TodoTask Title"
+                            )
+                            .font(.title2)
+                            .textFieldStyle(.roundedBorder)
                         } else {
                             HStack {
                                 Button {
@@ -89,16 +96,48 @@ struct TaskDetailView: View {
                                 .padding(.horizontal)
                             
                             if isEditing {
-                                TextEditor(text: $task.notes)
-                                    .frame(minHeight: 100)
-                                    .padding(8)
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(8)
-                                    .padding(.horizontal)
+                                MentionableTextEditor(
+                                    text: $task.notes,
+                                    mentionedContacts: $mentionedContacts,
+                                    placeholder: "Add notes..."
+                                )
+                                .frame(minHeight: 100)
+                                .padding(8)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(8)
+                                .padding(.horizontal)
                             } else {
                                 Text(task.notes)
                                     .padding(.horizontal)
                                     .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    
+                    // Mentioned Contacts Section
+                    if !loadedContacts.isEmpty || (isEditing && !mentionedContacts.isEmpty) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Mentioned Contacts")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack {
+                                    ForEach(isEditing ? mentionedContacts : loadedContacts, id: \.identifier) { contact in
+                                        InteractiveContactView(contact: contact, style: .mention)
+                                        
+                                        if isEditing {
+                                            Button {
+                                                mentionedContacts.removeAll { $0.identifier == contact.identifier }
+                                            } label: {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .foregroundColor(.secondary)
+                                                    .font(.caption)
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal)
                             }
                         }
                     }
@@ -238,6 +277,16 @@ struct TaskDetailView: View {
             }
             .navigationTitle("TodoTask Details")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                loadMentionedContacts()
+            }
+            .onChange(of: isEditing) { newValue in
+                if newValue {
+                    mentionedContacts = loadedContacts
+                } else {
+                    loadMentionedContacts()
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     if isEditing {
@@ -255,8 +304,10 @@ struct TaskDetailView: View {
                 ToolbarItem(placement: .primaryAction) {
                     if isEditing {
                         Button("Save") {
+                            task.mentionedContactIds = mentionedContacts.map { $0.identifier }
                             viewModel.updateTask(task)
                             isEditing = false
+                            print("✅ Saved task with \(mentionedContacts.count) mentioned contacts")
                         }
                     } else {
                         Menu {
@@ -324,6 +375,47 @@ struct TaskDetailView: View {
                     isGeneratingChecklist = false
                     print("❌ Failed to generate checklist: \(error)")
                 }
+            }
+        }
+    }
+    
+    private func loadMentionedContacts() {
+        guard !task.mentionedContactIds.isEmpty else {
+            loadedContacts = []
+            return
+        }
+        
+        print("📱 Loading \(task.mentionedContactIds.count) mentioned contacts")
+        
+        Task {
+            do {
+                let store = CNContactStore()
+                let keysToFetch = [
+                    CNContactGivenNameKey,
+                    CNContactFamilyNameKey,
+                    CNContactEmailAddressesKey,
+                    CNContactPhoneNumbersKey,
+                    CNContactImageDataKey,
+                    CNContactOrganizationNameKey
+                ] as [CNKeyDescriptor]
+                
+                var contacts: [CNContact] = []
+                
+                for contactId in task.mentionedContactIds {
+                    do {
+                        let contact = try store.unifiedContact(withIdentifier: contactId, keysToFetch: keysToFetch)
+                        contacts.append(contact)
+                    } catch {
+                        print("❌ Failed to load contact with ID: \(contactId)")
+                    }
+                }
+                
+                await MainActor.run {
+                    loadedContacts = contacts
+                    print("✅ Loaded \(contacts.count) contacts")
+                }
+            } catch {
+                print("❌ Error loading contacts: \(error)")
             }
         }
     }

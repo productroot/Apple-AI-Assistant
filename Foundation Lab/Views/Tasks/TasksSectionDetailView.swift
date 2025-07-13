@@ -72,7 +72,13 @@ struct TasksSectionDetailView: View {
 
 
         .sheet(isPresented: $showingAddTask) {
-            AddTaskView(viewModel: viewModel)
+            if case .project(let project) = filter {
+                AddTaskView(viewModel: viewModel, preselectedProject: project)
+            } else if case .area(let area) = filter {
+                AddTaskView(viewModel: viewModel, preselectedArea: area)
+            } else {
+                AddTaskView(viewModel: viewModel)
+            }
         }
         .sheet(item: $selectedTask) { task in
             TaskDetailView(task: task, viewModel: viewModel)
