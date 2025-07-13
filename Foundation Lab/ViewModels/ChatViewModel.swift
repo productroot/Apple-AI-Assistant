@@ -637,8 +637,8 @@ final class ChatViewModel {
         let task = TodoTask(
             title: reminderInfo.title,
             notes: reminderInfo.notes ?? "",
-            priority: TodoTask.Priority(rawValue: reminderInfo.priority) ?? .medium,
             dueDate: reminderInfo.dueDate,
+            priority: TodoTask.Priority(rawValue: reminderInfo.priority) ?? .medium,
             createdFromReminder: true
         )
         

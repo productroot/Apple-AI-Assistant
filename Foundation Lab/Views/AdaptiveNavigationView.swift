@@ -11,9 +11,15 @@ import FoundationModels
 struct AdaptiveNavigationView: View {
     @State private var contentViewModel = ContentViewModel()
     @State private var tasksViewModel = TasksViewModel()
-    @State private var chatViewModel = ChatViewModel(tasksViewModel: tasksViewModel)
+    @State private var chatViewModel: ChatViewModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private let navigationCoordinator = NavigationCoordinator.shared
+    
+    init() {
+        let tasks = TasksViewModel()
+        _tasksViewModel = State(initialValue: tasks)
+        _chatViewModel = State(initialValue: ChatViewModel(tasksViewModel: tasks))
+    }
     
     var body: some View {
 #if os(iOS)
