@@ -567,10 +567,15 @@ final class ChatViewModel {
                 
                 // Check if this is a successful reminder creation
                 if text.contains("\"status\": \"success\"") && text.contains("\"message\": \"Reminder created successfully\"") {
+                    print("🔍 Found reminder creation JSON: \(text)")
+                    
                     // Parse the reminder details from the JSON
                     if let reminderInfo = parseReminderFromJSON(text) {
+                        print("✅ Successfully parsed reminder: \(reminderInfo)")
                         // Create a corresponding task
                         await createTaskFromReminder(reminderInfo, tasksViewModel: tasksViewModel)
+                    } else {
+                        print("❌ Failed to parse reminder from JSON")
                     }
                 }
             }
@@ -601,11 +606,32 @@ final class ChatViewModel {
            let endRange = json[dueDateRange.upperBound...].range(of: "\"") {
             let dueDateString = String(json[dueDateRange.upperBound..<endRange.lowerBound])
             
-            // Parse the date string (format: "Jul 14, 2025 at 2:00 PM")
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMM d, yyyy 'at' h:mm a"
-            formatter.locale = Locale(identifier: "en_US")
-            dueDate = formatter.date(from: dueDateString)
+            // Don't try to parse if the date string is empty
+            if !dueDateString.isEmpty {
+                // Parse the date string using DateFormatter with medium date and short time
+                let formatter = DateFormatter()
+                formatter.dateStyle = .medium
+                formatter.timeStyle = .short
+                formatter.locale = Locale(identifier: "en_US")
+                
+                // First try to parse with the standard format
+                dueDate = formatter.date(from: dueDateString)
+                
+                // If that fails, try alternate formats
+                if dueDate == nil {
+                    formatter.dateFormat = "MMM d, yyyy 'at' h:mm a"
+                    dueDate = formatter.date(from: dueDateString)
+                }
+                
+                if dueDate == nil {
+                    formatter.dateFormat = "MMM dd, yyyy 'at' h:mm a"
+                    dueDate = formatter.date(from: dueDateString)
+                }
+                
+                if dueDate == nil {
+                    print("⚠️ Failed to parse date: \(dueDateString)")
+                }
+            }
         }
         
         // Extract priority
@@ -637,7 +663,7 @@ final class ChatViewModel {
         let task = TodoTask(
             title: reminderInfo.title,
             notes: reminderInfo.notes ?? "",
-            dueDate: reminderInfo.dueDate,
+            scheduledDate: reminderInfo.dueDate,  // Use scheduledDate instead of dueDate
             priority: TodoTask.Priority(rawValue: reminderInfo.priority) ?? .medium,
             createdFromReminder: true
         )
@@ -646,5 +672,8 @@ final class ChatViewModel {
         tasksViewModel.addTask(task)
         
         print("📝 Created task from reminder: \(task.title)")
+        print("   Scheduled date: \(task.scheduledDate?.formatted() ?? "No scheduled date")")
+        print("   Priority: \(task.priority.rawValue)")
+        print("   Notes: \(task.notes.isEmpty ? "No notes" : task.notes)")
     }
 }
