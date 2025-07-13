@@ -214,9 +214,7 @@ struct SettingsView: View {
   var body: some View {
     NavigationStack {
       Form {
-        webSearchSection
-        
-        iCloudSection
+        helpSection
         
         Section {
           Toggle("Create Tasks from Chat Reminders", isOn: $createTasksFromChatReminders)
@@ -228,9 +226,11 @@ struct SettingsView: View {
             .foregroundColor(.secondary)
         }
         
+        iCloudSection
+        
         dataManagementSection
         
-        helpSection
+        webSearchSection
         
         Section {
           HStack {
