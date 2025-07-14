@@ -151,7 +151,8 @@ struct AIHelpView: View {
                             "12 personality traits to choose from (Friendly, Professional, Creative, etc.)",
                             "Combine multiple traits for a unique AI personality",
                             "Custom instructions field for specific requirements",
-                            "Real-time preview of combined instructions",
+                            "System prompt updates incrementally with custom instructions",
+                            "Consistent text sizing between system prompt and custom instructions",
                             "Automatic save to iCloud for cross-device sync",
                             "Reset option to restore default behavior"
                         ],

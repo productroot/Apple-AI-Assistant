@@ -55,13 +55,16 @@ final class ChatViewModel {
     // MARK: - Initialization
 
     init(tasksViewModel: TasksViewModel? = nil) {
+        print("🚀 ChatViewModel init")
         self.tasksViewModel = tasksViewModel
         self.session = LanguageModelSession(
             instructions: Instructions(defaultInstructions)
         )
+        print("📝 Initial instructions: \(instructions)")
         loadPersonalityTraits()
         loadCustomInstructions()
         updateInstructionsWithTraits()
+        print("📝 Final instructions after init: \(instructions)")
     }
     
     // MARK: - Calendar Context
@@ -770,6 +773,7 @@ final class ChatViewModel {
         
         instructions = combinedInstructions
         print("✅ Instructions updated")
+        print("📝 Current instructions: \(instructions)")
     }
     
     @MainActor

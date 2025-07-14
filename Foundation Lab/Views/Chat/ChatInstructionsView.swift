@@ -50,16 +50,30 @@ struct ChatInstructionsView: View {
                             .fontWeight(.medium)
                             .foregroundColor(.secondary)
                         
-                        ScrollView(.vertical, showsIndicators: false) {
-                            Text(instructions)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                        VStack(alignment: .leading) {
+                            if instructions.isEmpty {
+                                Text("No instructions available")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .italic()
+                            } else {
+                                ScrollView {
+                                    Text(instructions)
+                                        .font(.caption2)
+                                        .foregroundColor(.primary)
+                                        .multilineTextAlignment(.leading)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
                         }
                         .padding(Spacing.small)
-                        .frame(maxWidth: .infinity, maxHeight: 100, alignment: .topLeading)
-                        .background(Color.gray.opacity(0.05))
+                        .frame(maxWidth: .infinity, minHeight: 100, maxHeight: 100, alignment: .topLeading)
+                        .background(Color(.systemGray6))
                         .cornerRadius(8)
+                        .onAppear {
+                            print("📱 ChatInstructionsView - Current instructions: \(instructions)")
+                            print("   Instructions length: \(instructions.count)")
+                        }
                     }
                     .padding(.horizontal, Spacing.medium)
                     
@@ -77,21 +91,21 @@ struct ChatInstructionsView: View {
                         ZStack(alignment: .topLeading) {
                             if customInstructions.isEmpty {
                                 Text("Add any additional instructions for the AI...")
-                                    .font(.body)
+                                    .font(.caption2)
                                     .foregroundColor(.secondary.opacity(0.6))
                                     .padding(Spacing.medium)
                                     .allowsHitTesting(false)
                             }
                             
                             TextEditor(text: $customInstructions)
-                                .font(.body)
+                                .font(.caption2)
                                 .scrollContentBackground(.hidden)
                                 .padding(Spacing.small)
                                 .foregroundColor(.primary)
                         }
                         .frame(maxWidth: .infinity, minHeight: 80, maxHeight: 120, alignment: .leading)
                         .background(Color.gray.opacity(0.1))
-                        .cornerRadius(12)
+                        .cornerRadius(8)
                         .padding(.horizontal, Spacing.medium)
                     }
                     
