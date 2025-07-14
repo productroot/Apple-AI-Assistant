@@ -42,7 +42,6 @@ struct TaskRowView: View {
     @State private var loadedContacts: [CNContact] = []
     @State private var editingMentionedContacts: [CNContact] = []
     @State private var editedReminderTime: Date?
-    @State private var draggedChecklistItem: ChecklistItem?
     // Reminder state is now managed by the integrated picker
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
@@ -620,23 +619,33 @@ struct TaskRowView: View {
                         updatedTask.checklistItems = task.checklistItems
                         viewModel.updateTask(updatedTask)
                         print("💾 Updated checklist item and saved task")
-                    },
-                    draggedItem: $draggedChecklistItem
-                )
-                .background(draggedChecklistItem?.id == item.id ? Color.blue.opacity(0.1) : Color.clear)
-                .onDrop(of: [.text], delegate: ChecklistDropDelegate(
-                    item: item,
-                    items: $task.checklistItems,
-                    draggedItem: $draggedChecklistItem,
-                    currentIndex: index,
-                    onReorder: {
-                        // Save the updated task after reordering
-                        var updatedTask = task
-                        updatedTask.checklistItems = task.checklistItems
-                        viewModel.updateTask(updatedTask)
-                        print("💾 Reordered checklist items and saved task")
                     }
-                ))
+                )
+                .dropDestination(for: String.self) { droppedIDs, location in
+                    print("📍 Drop destination activated with \(droppedIDs.count) IDs")
+                    guard let droppedID = droppedIDs.first,
+                          let draggedID = UUID(uuidString: droppedID),
+                          let draggedIndex = task.checklistItems.firstIndex(where: { $0.id == draggedID }),
+                          let currentIndex = task.checklistItems.firstIndex(where: { $0.id == item.id }),
+                          draggedIndex != currentIndex else {
+                        print("   ❌ Invalid drop or same position")
+                        return false
+                    }
+                    
+                    print("   ✅ Moving from index \(draggedIndex) to \(currentIndex)")
+                    withAnimation(.spring()) {
+                        task.checklistItems.move(fromOffsets: IndexSet(integer: draggedIndex),
+                                               toOffset: currentIndex > draggedIndex ? currentIndex + 1 : currentIndex)
+                    }
+                    
+                    // Save the updated task after reordering
+                    var updatedTask = task
+                    updatedTask.checklistItems = task.checklistItems
+                    viewModel.updateTask(updatedTask)
+                    print("💾 Reordered checklist items and saved task")
+                    
+                    return true
+                }
             }
         }
     }
@@ -938,7 +947,6 @@ struct InlineChecklistItemRow: View {
     @Binding var item: ChecklistItem
     let onDelete: () -> Void
     let onChange: () -> Void
-    @Binding var draggedItem: ChecklistItem?
     @State private var isEditing = false
     @State private var showDeleteConfirmation = false
     @State private var deleteOffset: CGFloat = 0
@@ -1010,10 +1018,10 @@ struct InlineChecklistItemRow: View {
                 Image(systemName: "line.3.horizontal")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
-                    .frame(width: 20)
-                    .onDrag {
-                        draggedItem = item
-                        return NSItemProvider(object: item.id.uuidString as NSString)
+                    .padding(8)
+                    .contentShape(Rectangle())
+                    .draggable(item) {
+                        DraggableChecklistPreview(item: item)
                     }
             }
             .padding(.vertical, 4)
@@ -1021,16 +1029,17 @@ struct InlineChecklistItemRow: View {
             .background(Color(.systemGray6).opacity(0.5))
             .cornerRadius(6)
             .offset(x: deleteOffset)
-            .gesture(
+            .highPriorityGesture(
                 DragGesture()
                     .onChanged { value in
-                        if value.translation.width < 0 {
+                        // Only respond to horizontal swipes, not vertical drags
+                        if abs(value.translation.width) > abs(value.translation.height) && value.translation.width < 0 {
                             deleteOffset = max(value.translation.width, -80)
                         }
                     }
                     .onEnded { value in
                         withAnimation(.spring()) {
-                            if value.translation.width < -60 {
+                            if value.translation.width < -60 && abs(value.translation.width) > abs(value.translation.height) {
                                 deleteOffset = -80
                             } else {
                                 deleteOffset = 0
@@ -1073,42 +1082,6 @@ struct DraggableChecklistPreview: View {
     }
 }
 
-// MARK: - Checklist Drop Delegate
-struct ChecklistDropDelegate: DropDelegate {
-    let item: ChecklistItem
-    @Binding var items: [ChecklistItem]
-    @Binding var draggedItem: ChecklistItem?
-    let currentIndex: Int
-    let onReorder: () -> Void
-    
-    func performDrop(info: DropInfo) -> Bool {
-        draggedItem = nil
-        onReorder()
-        return true
-    }
-    
-    func dropEntered(info: DropInfo) {
-        guard let draggedItem = draggedItem,
-              draggedItem.id != item.id,
-              let from = items.firstIndex(where: { $0.id == draggedItem.id }),
-              let to = items.firstIndex(where: { $0.id == item.id }) else {
-            return
-        }
-        
-        withAnimation(.spring()) {
-            items.move(fromOffsets: IndexSet(integer: from),
-                      toOffset: to > from ? to + 1 : to)
-        }
-    }
-    
-    func dropExited(info: DropInfo) {
-        // Optional: Add any cleanup here
-    }
-    
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        return DropProposal(operation: .move)
-    }
-}
 
 // MARK: - Custom Date Picker View
 struct CustomDatePickerView: View {
