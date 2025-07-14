@@ -149,9 +149,13 @@ struct ChatView: View {
         ChatInstructionsView(
             showInstructions: $showInstructions,
             instructions: $viewModel.instructions,
+            customInstructions: $viewModel.customInstructions,
+            selectedTraits: $viewModel.selectedPersonalityTraits,
             onApply: {
-                viewModel.updateInstructions(viewModel.instructions)
                 viewModel.clearChat()
+            },
+            onReset: {
+                viewModel.resetInstructions()
             }
         )
     }

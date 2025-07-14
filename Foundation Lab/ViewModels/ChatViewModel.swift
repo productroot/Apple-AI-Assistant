@@ -22,6 +22,18 @@ final class ChatViewModel {
     var showError: Bool = false
     var hasCalendarContext: Bool = false
     var hasRemindersContext: Bool = false
+    var selectedPersonalityTraits: Set<PersonalityTrait> = [] {
+        didSet {
+            savePersonalityTraits()
+            updateInstructionsWithTraits()
+        }
+    }
+    var customInstructions: String = "" {
+        didSet {
+            saveCustomInstructions()
+            updateInstructionsWithTraits()
+        }
+    }
 
     // MARK: - Public Properties
 
@@ -29,6 +41,12 @@ final class ChatViewModel {
     private var calendarTool: CalendarTool?
     private var remindersTool: RemindersTool?
     private var tasksViewModel: TasksViewModel?
+    
+    // MARK: - Private Properties
+    
+    private let defaultInstructions = "You are a helpful, friendly AI assistant. Engage in natural conversation and provide thoughtful, detailed responses."
+    private let personalityTraitsKey = "chatPersonalityTraits"
+    private let customInstructionsKey = "chatCustomInstructions"
     
     // MARK: - Feedback State
     
@@ -39,10 +57,11 @@ final class ChatViewModel {
     init(tasksViewModel: TasksViewModel? = nil) {
         self.tasksViewModel = tasksViewModel
         self.session = LanguageModelSession(
-            instructions: Instructions(
-                "You are a helpful, friendly AI assistant. Engage in natural conversation and provide thoughtful, detailed responses."
-            )
+            instructions: Instructions(defaultInstructions)
         )
+        loadPersonalityTraits()
+        loadCustomInstructions()
+        updateInstructionsWithTraits()
     }
     
     // MARK: - Calendar Context
@@ -675,5 +694,99 @@ final class ChatViewModel {
         print("   Scheduled date: \(task.scheduledDate?.formatted() ?? "No scheduled date")")
         print("   Priority: \(task.priority.rawValue)")
         print("   Notes: \(task.notes.isEmpty ? "No notes" : task.notes)")
+    }
+    
+    // MARK: - Personality Traits Management
+    
+    private func loadPersonalityTraits() {
+        print("📖 Loading personality traits from storage")
+        
+        // Try to load from iCloud first
+        if let cloudData = iCloudService.shared.getData(forKey: personalityTraitsKey),
+           let traits = try? JSONDecoder().decode(Set<PersonalityTrait>.self, from: cloudData) {
+            print("☁️ Loaded personality traits from iCloud: \(traits.count) traits")
+            selectedPersonalityTraits = traits
+        } else if let localData = UserDefaults.standard.data(forKey: personalityTraitsKey),
+                  let traits = try? JSONDecoder().decode(Set<PersonalityTrait>.self, from: localData) {
+            print("💾 Loaded personality traits from UserDefaults: \(traits.count) traits")
+            selectedPersonalityTraits = traits
+        } else {
+            print("❌ No saved personality traits found")
+        }
+    }
+    
+    private func savePersonalityTraits() {
+        print("💾 Saving personality traits")
+        
+        if let data = try? JSONEncoder().encode(selectedPersonalityTraits) {
+            UserDefaults.standard.set(data, forKey: personalityTraitsKey)
+            iCloudService.shared.setData(data, forKey: personalityTraitsKey)
+            print("✅ Saved \(selectedPersonalityTraits.count) personality traits")
+        }
+    }
+    
+    private func loadCustomInstructions() {
+        print("📖 Loading custom instructions from storage")
+        
+        // Try to load from iCloud first
+        if let cloudInstructions = iCloudService.shared.getString(forKey: customInstructionsKey) {
+            print("☁️ Loaded custom instructions from iCloud")
+            customInstructions = cloudInstructions
+        } else if let localInstructions = UserDefaults.standard.string(forKey: customInstructionsKey) {
+            print("💾 Loaded custom instructions from UserDefaults")
+            customInstructions = localInstructions
+        } else {
+            print("❌ No saved custom instructions found")
+        }
+    }
+    
+    private func saveCustomInstructions() {
+        print("💾 Saving custom instructions")
+        
+        UserDefaults.standard.set(customInstructions, forKey: customInstructionsKey)
+        iCloudService.shared.setString(customInstructions, forKey: customInstructionsKey)
+        print("✅ Saved custom instructions")
+    }
+    
+    private func updateInstructionsWithTraits() {
+        print("🔄 Updating instructions with personality traits")
+        
+        var combinedInstructions = defaultInstructions
+        
+        // Add personality trait instructions
+        if !selectedPersonalityTraits.isEmpty {
+            let traitInstructions = selectedPersonalityTraits
+                .map { $0.instruction }
+                .joined(separator: " ")
+            combinedInstructions += " " + traitInstructions
+            print("   Added \(selectedPersonalityTraits.count) personality traits")
+        }
+        
+        // Add custom instructions
+        if !customInstructions.isEmpty {
+            combinedInstructions += " " + customInstructions
+            print("   Added custom instructions")
+        }
+        
+        instructions = combinedInstructions
+        print("✅ Instructions updated")
+    }
+    
+    @MainActor
+    func resetInstructions() {
+        print("🔄 Resetting instructions to default")
+        selectedPersonalityTraits.removeAll()
+        customInstructions = ""
+        instructions = defaultInstructions
+        
+        // Clear from storage
+        UserDefaults.standard.removeObject(forKey: personalityTraitsKey)
+        UserDefaults.standard.removeObject(forKey: customInstructionsKey)
+        iCloudService.shared.removeData(forKey: personalityTraitsKey)
+        iCloudService.shared.removeData(forKey: customInstructionsKey)
+        
+        // Update session with default instructions
+        updateInstructions(defaultInstructions)
+        print("✅ Instructions reset to default")
     }
 }

@@ -558,6 +558,37 @@ final class iCloudService {
             print("CloudKit configuration reset")
         }
     }
+    
+    // MARK: - Generic Key-Value Storage
+    
+    private let keyValueStore = NSUbiquitousKeyValueStore.default
+    
+    func setData(_ data: Data, forKey key: String) {
+        guard iCloudEnabled else { return }
+        keyValueStore.set(data, forKey: key)
+        keyValueStore.synchronize()
+    }
+    
+    func getData(forKey key: String) -> Data? {
+        guard iCloudEnabled else { return nil }
+        return keyValueStore.data(forKey: key)
+    }
+    
+    func setString(_ string: String, forKey key: String) {
+        guard iCloudEnabled else { return }
+        keyValueStore.set(string, forKey: key)
+        keyValueStore.synchronize()
+    }
+    
+    func getString(forKey key: String) -> String? {
+        guard iCloudEnabled else { return nil }
+        return keyValueStore.string(forKey: key)
+    }
+    
+    func removeData(forKey key: String) {
+        keyValueStore.removeObject(forKey: key)
+        keyValueStore.synchronize()
+    }
 }
 
 enum iCloudError: LocalizedError {

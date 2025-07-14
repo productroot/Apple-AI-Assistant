@@ -140,6 +140,23 @@ struct AIHelpView: View {
                         ],
                         howToUse: "Access from Tasks view → AI Tools → Productivity Insights"
                     )
+                    
+                    // AI Personality Customization
+                    AIFeatureCard(
+                        icon: "person.crop.circle.badge.plus",
+                        iconColor: .orange,
+                        title: "AI Personality Customization",
+                        description: "Customize the AI assistant's personality and behavior to match your preferences",
+                        features: [
+                            "12 personality traits to choose from (Friendly, Professional, Creative, etc.)",
+                            "Combine multiple traits for a unique AI personality",
+                            "Custom instructions field for specific requirements",
+                            "Real-time preview of combined instructions",
+                            "Automatic save to iCloud for cross-device sync",
+                            "Reset option to restore default behavior"
+                        ],
+                        howToUse: "Access from Chat view → Customize AI behavior (under Instructions)"
+                    )
                 }
                 .padding(.horizontal)
                 
