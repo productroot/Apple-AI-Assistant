@@ -275,7 +275,7 @@ struct TaskDetailView: View {
                             
                             VStack(spacing: 0) {
                                 ForEach($task.checklistItems) { $item in
-                                    ChecklistItemRow(item: $item, isEditing: isEditing, onDelete: {
+                                    DetailChecklistItemRow(item: $item, isEditing: isEditing, onDelete: {
                                         task.checklistItems.removeAll { $0.id == item.id }
                                     })
                                 }
@@ -464,7 +464,7 @@ struct TaskDetailView: View {
 }
 
 // MARK: - Checklist Item Row
-struct ChecklistItemRow: View {
+struct DetailChecklistItemRow: View {
     @Binding var item: ChecklistItem
     let isEditing: Bool
     let onDelete: (() -> Void)?

@@ -430,6 +430,20 @@ let helpContent: [String: (overview: String, sections: [HelpSection])] = [
                     HelpItem(type: .text, content: "Checklist: Break down into subtasks"),
                     HelpItem(type: .text, content: "Contacts: @ mention relevant people")
                 ]
+            ),
+            HelpSection(
+                title: "Working with Checklists",
+                content: [
+                    HelpItem(type: .text, content: "Add checklist items to break down complex tasks"),
+                    HelpItem(type: .step, content: "Tap + to add a new checklist item"),
+                    HelpItem(type: .step, content: "Tap the circle to mark items complete"),
+                    HelpItem(type: .step, content: "Tap item text to edit it inline"),
+                    HelpItem(type: .step, content: "Drag items by the handle on the right to reorder"),
+                    HelpItem(type: .step, content: "Swipe left to reveal delete option"),
+                    HelpItem(type: .step, content: "Confirm deletion when prompted"),
+                    HelpItem(type: .tip, content: "Checklist is automatically in edit mode during inline task editing"),
+                    HelpItem(type: .tip, content: "Use AI to generate checklist items automatically")
+                ]
             )
         ]
     ),

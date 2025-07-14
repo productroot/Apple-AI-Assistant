@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Contacts
+import UniformTypeIdentifiers
 
 struct TaskRowView: View {
     @State var task: TodoTask
@@ -172,6 +173,10 @@ struct TaskRowView: View {
                 reminderTime: $editedReminderTime
             )
             .presentationDetents([.large])
+            .onDisappear {
+                // Update hasReminder state based on whether reminder time was set
+                // This ensures the reminder state is properly reflected
+            }
         }
         .alert("Generation Error", isPresented: $showGenerationError) {
             Button("OK") {
@@ -339,7 +344,6 @@ struct TaskRowView: View {
                                     .foregroundStyle(.primary)
                             }
                         }
-                        
                     }
                     .padding(.horizontal, 4)
                 }
@@ -359,6 +363,313 @@ struct TaskRowView: View {
         .padding(.vertical, 12)
     }
 
+    // Break down the complex view into smaller components
+    @ViewBuilder
+    private var titleEditSection: some View {
+        MentionableTextField(
+            text: $editedTitle,
+            mentionedContacts: $editingMentionedContacts,
+            placeholder: "Task Title"
+        )
+        .font(.body)
+        .textFieldStyle(.plain)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color(.systemGray5))
+        .cornerRadius(8)
+        .focused($isTitleFocused)
+        .submitLabel(.done)
+        .onSubmit {
+            isTitleFocused = false
+            isNotesFocused = false
+            saveTask()
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    isTitleFocused = false
+                    isNotesFocused = false
+                    saveTask()
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var notesEditSection: some View {
+        MentionableTextEditor(
+            text: $editedNotes,
+            mentionedContacts: $editingMentionedContacts,
+            placeholder: "Notes"
+        )
+        .font(.body)
+        .frame(minHeight: 60, maxHeight: 120)
+        .padding(8)
+        .background(Color(.systemGray5))
+        .cornerRadius(8)
+        .focused($isNotesFocused)
+        .onSubmit {
+            isTitleFocused = false
+            isNotesFocused = false
+            saveTask()
+        }
+    }
+    
+    @ViewBuilder
+    private var metadataControlsSection: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 16) {
+                            // Priority Picker
+                            Menu {
+                                ForEach(TodoTask.Priority.allCases, id: \.self) { priority in
+                                    Button {
+                                        editedPriority = priority
+                                    } label: {
+                                        Label(priority.name, systemImage: priority.icon)
+                                            .foregroundStyle(priority.color)
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: editedPriority.icon)
+                                        .font(.system(size: 16))
+                                        .foregroundStyle(editedPriority.color)
+                                    if editedPriority != .none {
+                                        Text(editedPriority.name)
+                                            .font(.caption)
+                                            .foregroundStyle(editedPriority.color)
+                                    }
+                                }
+                            }
+                            
+                            Divider()
+                                .frame(height: 20)
+                            
+                            // Date & Reminder Picker
+                            HStack(spacing: 6) {
+                                Image(systemName: editedReminderTime != nil ? "bell.badge" : "calendar")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(editedScheduledDate != nil ? .blue : .secondary)
+                                if let date = editedScheduledDate {
+                                    if let time = editedReminderTime {
+                                        Text(time, format: .dateTime.month(.abbreviated).day().hour().minute())
+                                            .font(.caption)
+                                            .foregroundStyle(.primary)
+                                    } else {
+                                        Text(date, format: .dateTime.month(.abbreviated).day())
+                                            .font(.caption)
+                                            .foregroundStyle(.primary)
+                                    }
+                                }
+                            }
+                            .onTapGesture {
+                                showingIntegratedDatePicker = true
+                            }
+                            
+                            Divider()
+                                .frame(height: 20)
+                            
+                            // Recurrence Picker
+                            Menu {
+                                Button("None") {
+                                    editedRecurrenceRule = nil
+                                    editedCustomRecurrence = nil
+                                }
+                                
+                                Divider()
+                                
+                                ForEach(RecurrenceRule.allCases.filter { $0 != .custom }, id: \.self) { rule in
+                                    Button {
+                                        editedRecurrenceRule = rule
+                                        editedCustomRecurrence = nil
+                                    } label: {
+                                        Label(rule.displayName, systemImage: rule.icon)
+                                    }
+                                }
+                                
+                                Divider()
+                                
+                                Button {
+                                    showingCustomRecurrence = true
+                                } label: {
+                                    Label("Custom...", systemImage: "gearshape")
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: editedRecurrenceRule?.icon ?? "arrow.clockwise")
+                                        .font(.system(size: 16))
+                                        .foregroundStyle(editedRecurrenceRule != nil ? .purple : .secondary)
+                                    if editedRecurrenceRule != nil {
+                                        Text(recurrenceDisplayText)
+                                            .font(.caption)
+                                            .foregroundStyle(.primary)
+                                            .lineLimit(1)
+                                    }
+                                }
+                            }
+                            
+                            Divider()
+                                .frame(height: 20)
+                            
+                            // Duration Picker
+                            Menu {
+                                Button("15 min") { editedDuration = 15 * 60 }
+                                Button("30 min") { editedDuration = 30 * 60 }
+                                Button("1 hour") { editedDuration = 60 * 60 }
+                                Button("2 hours") { editedDuration = 2 * 60 * 60 }
+                                Button("4 hours") { editedDuration = 4 * 60 * 60 }
+                                Button("8 hours") { editedDuration = 8 * 60 * 60 }
+                                
+                                Divider()
+                                
+                                Button {
+                                    generateDurationEstimate()
+                                } label: {
+                                    Label("AI Estimate", systemImage: "sparkles")
+                                }
+                                
+                                Divider()
+                                
+                                Button("No Duration", role: .destructive) { editedDuration = nil }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "clock")
+                                        .font(.system(size: 16))
+                                        .foregroundStyle(editedDuration != nil ? .orange : .secondary)
+                                    if isGeneratingDuration {
+                                        ProgressView()
+                                            .scaleEffect(0.7)
+                                    } else if let _ = editedDuration {
+                                        Text(durationDisplayText)
+                                            .font(.caption)
+                                            .foregroundStyle(.primary)
+                                            .lineLimit(1)
+                                    }
+                                }
+                            }
+                            .disabled(isGeneratingDuration)
+            }
+            .padding(.horizontal, 4)
+        }
+        .frame(height: 30)
+    }
+    
+    @ViewBuilder
+    private var mentionedContactsSection: some View {
+        if !editingMentionedContacts.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Mentioned Contacts", systemImage: "person.2.fill")
+                    .font(.caption)
+                    .foregroundStyle(.indigo)
+                
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(editingMentionedContacts, id: \.identifier) { contact in
+                            HStack(spacing: 4) {
+                                InteractiveContactView(contact: contact, style: .mention)
+                                
+                                Button {
+                                    editingMentionedContacts.removeAll { $0.identifier == contact.identifier }
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var checklistItemsView: some View {
+        VStack(spacing: 2) {
+            ForEach($task.checklistItems) { $item in
+                InlineChecklistItemRow(
+                    item: $item,
+                    onDelete: {
+                        withAnimation {
+                            task.checklistItems.removeAll { $0.id == item.id }
+                        }
+                    }
+                )
+                .draggable(item) {
+                    DraggableChecklistPreview(item: item)
+                }
+                .dropDestination(for: ChecklistItem.self) { items, _ in
+                    handleChecklistDrop(items: items, targetItem: item)
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var checklistSection: some View {
+        VStack(spacing: 8) {
+            if !task.checklistItems.isEmpty || isGeneratingChecklist {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Label("Checklist", systemImage: "checklist")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                        
+                        if !task.checklistItems.isEmpty {
+                            Text("\(task.checklistItems.filter { $0.isCompleted }.count)/\(task.checklistItems.count)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    // Checklist items
+                    checklistItemsView
+                    
+                    // Add new item field
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                        
+                        TextField("Add checklist item", text: $newChecklistItem)
+                            .font(.caption)
+                            .textFieldStyle(.plain)
+                            .focused($isNewChecklistItemFocused)
+                            .onSubmit {
+                                addChecklistItem()
+                            }
+                    }
+                    .padding(.top, 4)
+                }
+            }
+            
+            // AI Generate Checklist Button
+            Button {
+                generateChecklist()
+            } label: {
+                HStack(spacing: 6) {
+                    if isGeneratingChecklist {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "sparkles")
+                    }
+                    Text(task.checklistItems.isEmpty ? "Generate Checklist" : "Add More Items")
+                }
+                .font(.caption)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.blue)
+                .cornerRadius(8)
+            }
+            .disabled(isGeneratingChecklist)
+        }
+    }
+    
     private var expandedEditView: some View {
         ZStack {
             // Background tap handler
@@ -373,294 +684,20 @@ struct TaskRowView: View {
             VStack(spacing: 0) {
                 // Main editing area
                 VStack(spacing: 12) {
-                                 // Title Field
-                 MentionableTextField(
-                     text: $editedTitle,
-                     mentionedContacts: $editingMentionedContacts,
-                     placeholder: "Task Title"
-                 )
-                 .font(.body)
-                 .textFieldStyle(.plain)
-                 .padding(.horizontal, 12)
-                 .padding(.vertical, 8)
-                 .background(Color(.systemGray5))
-                 .cornerRadius(8)
-                 .focused($isTitleFocused)
-                     .submitLabel(.done)
-                     .onSubmit {
-                         isTitleFocused = false
-                         isNotesFocused = false
-                         saveTask()
-                     }
-                     .toolbar {
-                         ToolbarItemGroup(placement: .keyboard) {
-                             Spacer()
-                             Button("Done") {
-                                 isTitleFocused = false
-                                 isNotesFocused = false
-                                 saveTask()
-                             }
-                         }
-                     }
-                
-                                 // Notes Field
-                 MentionableTextEditor(
-                     text: $editedNotes,
-                     mentionedContacts: $editingMentionedContacts,
-                     placeholder: "Notes"
-                 )
-                 .font(.body)
-                 .frame(minHeight: 60, maxHeight: 120)
-                 .padding(8)
-                 .background(Color(.systemGray5))
-                 .cornerRadius(8)
-                 .focused($isNotesFocused)
-                     .onSubmit {
-                         isTitleFocused = false
-                         isNotesFocused = false
-                         saveTask()
-                     }
-                
-                // Metadata Controls - Single line with icon buttons
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 16) {
-                        // Priority Picker
-                        Menu {
-                            ForEach(TodoTask.Priority.allCases, id: \.self) { priority in
-                                Button {
-                                    editedPriority = priority
-                                } label: {
-                                    Label(priority.name, systemImage: priority.icon)
-                                        .foregroundStyle(priority.color)
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: editedPriority.icon)
-                                    .font(.system(size: 16))
-                                    .foregroundStyle(editedPriority.color)
-                                if editedPriority != .none {
-                                    Text(editedPriority.name)
-                                        .font(.caption)
-                                        .foregroundStyle(editedPriority.color)
-                                }
-                            }
-                        }
-                        
-                        Divider()
-                            .frame(height: 20)
-                        
-                        // Date & Reminder Picker
-                        HStack(spacing: 6) {
-                            Image(systemName: editedReminderTime != nil ? "bell.badge" : "calendar")
-                                .font(.system(size: 16))
-                                .foregroundStyle(editedScheduledDate != nil ? .blue : .secondary)
-                            if let date = editedScheduledDate {
-                                if let time = editedReminderTime {
-                                    Text(time, format: .dateTime.month(.abbreviated).day().hour().minute())
-                                        .font(.caption)
-                                        .foregroundStyle(.primary)
-                                } else {
-                                    Text(date, format: .dateTime.month(.abbreviated).day())
-                                        .font(.caption)
-                                        .foregroundStyle(.primary)
-                                }
-                            }
-                        }
-                        .onTapGesture {
-                            showingIntegratedDatePicker = true
-                        }
-                        
-                        Divider()
-                            .frame(height: 20)
-                        
-                        // Recurrence Picker
-                        Menu {
-                            Button("None") {
-                                editedRecurrenceRule = nil
-                                editedCustomRecurrence = nil
-                            }
-                            
-                            Divider()
-                            
-                            ForEach(RecurrenceRule.allCases.filter { $0 != .custom }, id: \.self) { rule in
-                                Button {
-                                    editedRecurrenceRule = rule
-                                    editedCustomRecurrence = nil
-                                } label: {
-                                    Label(rule.displayName, systemImage: rule.icon)
-                                }
-                            }
-                            
-                            Divider()
-                            
-                            Button {
-                                showingCustomRecurrence = true
-                            } label: {
-                                Label("Custom...", systemImage: "gearshape")
-                            }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: editedRecurrenceRule?.icon ?? "arrow.clockwise")
-                                    .font(.system(size: 16))
-                                    .foregroundStyle(editedRecurrenceRule != nil ? .purple : .secondary)
-                                if editedRecurrenceRule != nil {
-                                    Text(recurrenceDisplayText)
-                                        .font(.caption)
-                                        .foregroundStyle(.primary)
-                                        .lineLimit(1)
-                                }
-                            }
-                        }
-                        
-                        Divider()
-                            .frame(height: 20)
-                        
-                        // Duration Picker
-                        Menu {
-                            Button("15 min") { editedDuration = 15 * 60 }
-                            Button("30 min") { editedDuration = 30 * 60 }
-                            Button("1 hour") { editedDuration = 60 * 60 }
-                            Button("2 hours") { editedDuration = 2 * 60 * 60 }
-                            Button("4 hours") { editedDuration = 4 * 60 * 60 }
-                            Button("8 hours") { editedDuration = 8 * 60 * 60 }
-                            
-                            Divider()
-                            
-                            Button {
-                                generateDurationEstimate()
-                            } label: {
-                                Label("AI Estimate", systemImage: "sparkles")
-                            }
-                            
-                            Divider()
-                            
-                            Button("No Duration", role: .destructive) { editedDuration = nil }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "clock")
-                                    .font(.system(size: 16))
-                                    .foregroundStyle(editedDuration != nil ? .orange : .secondary)
-                                if isGeneratingDuration {
-                                    ProgressView()
-                                        .scaleEffect(0.7)
-                                } else if let _ = editedDuration {
-                                    Text(durationDisplayText)
-                                        .font(.caption)
-                                        .foregroundStyle(.primary)
-                                        .lineLimit(1)
-                                }
-                            }
-                        }
-                        .disabled(isGeneratingDuration)
-                    }
-                    .padding(.horizontal, 4)
-                }
-                .frame(height: 30)
-                
-                // Mentioned Contacts Section
-                if !editingMentionedContacts.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Mentioned Contacts", systemImage: "person.2.fill")
-                            .font(.caption)
-                            .foregroundStyle(.indigo)
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(editingMentionedContacts, id: \.identifier) { contact in
-                                    HStack(spacing: 4) {
-                                        InteractiveContactView(contact: contact, style: .mention)
-                                        
-                                        Button {
-                                            editingMentionedContacts.removeAll { $0.identifier == contact.identifier }
-                                        } label: {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Checklist Section
-                if !task.checklistItems.isEmpty || isGeneratingChecklist {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Label("Checklist", systemImage: "checklist")
-                                .font(.caption)
-                                .foregroundStyle(.green)
-                            
-                            if !task.checklistItems.isEmpty {
-                                Text("\(task.checklistItems.filter { $0.isCompleted }.count)/\(task.checklistItems.count)")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                            
-                            Spacer()
-                        }
-                        
-                        // Checklist items
-                        ForEach(task.checklistItems) { item in
-                            HStack(spacing: 8) {
-                                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                    .font(.caption)
-                                    .foregroundStyle(item.isCompleted ? .green : .secondary)
-                                    .onTapGesture {
-                                        if let index = task.checklistItems.firstIndex(where: { $0.id == item.id }) {
-                                            task.checklistItems[index].isCompleted.toggle()
-                                        }
-                                    }
-                                
-                                Text(item.title)
-                                    .font(.caption)
-                                    .strikethrough(item.isCompleted)
-                                    .foregroundStyle(item.isCompleted ? .secondary : .primary)
-                                
-                                Spacer()
-                            }
-                        }
-                        
-                        // Add new item field
-                        HStack(spacing: 8) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.caption)
-                                .foregroundStyle(.blue)
-                            
-                            TextField("Add checklist item", text: $newChecklistItem)
-                                .font(.caption)
-                                .textFieldStyle(.plain)
-                                .focused($isNewChecklistItemFocused)
-                                .onSubmit {
-                                    addChecklistItem()
-                                }
-                        }
-                    }
-                }
-                
-                // AI Generate Checklist Button
-                Button {
-                    generateChecklist()
-                } label: {
-                    HStack(spacing: 6) {
-                        if isGeneratingChecklist {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        } else {
-                            Image(systemName: "sparkles")
-                        }
-                        Text(task.checklistItems.isEmpty ? "Generate Checklist" : "Add More Items")
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.blue)
-                    .cornerRadius(8)
-                }
-                .disabled(isGeneratingChecklist)
+                    // Title Field
+                    titleEditSection
+                    
+                    // Notes Field
+                    notesEditSection
+                    
+                    // Metadata Controls
+                    metadataControlsSection
+                    
+                    // Mentioned Contacts
+                    mentionedContactsSection
+                    
+                    // Checklist
+                    checklistSection
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 16)
@@ -723,7 +760,6 @@ struct TaskRowView: View {
         }
     }
     
-    
     private func addChecklistItem() {
         guard !newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         task.checklistItems.append(ChecklistItem(title: newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines)))
@@ -762,6 +798,22 @@ struct TaskRowView: View {
         } else {
             return "Duration"
         }
+    }
+    
+    private func handleChecklistDrop(items: [ChecklistItem], targetItem: ChecklistItem) -> Bool {
+        guard let droppedItem = items.first,
+              let fromIndex = task.checklistItems.firstIndex(where: { $0.id == droppedItem.id }),
+              let toIndex = task.checklistItems.firstIndex(where: { $0.id == targetItem.id }) else {
+            return false
+        }
+        
+        withAnimation {
+            task.checklistItems.move(
+                fromOffsets: IndexSet(integer: fromIndex),
+                toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex
+            )
+        }
+        return true
     }
     
     private func formatDuration(_ duration: TimeInterval) -> String {
@@ -843,6 +895,102 @@ struct TaskRowView: View {
                 print("📱 Loaded \(contacts.count) contacts for task row")
             }
         }
+    }
+}
+
+// MARK: - Checklist Item Row
+struct InlineChecklistItemRow: View {
+    @Binding var item: ChecklistItem
+    let onDelete: () -> Void
+    @State private var isEditing = false
+    @State private var showDeleteConfirmation = false
+    @FocusState private var isFocused: Bool
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            // Completion toggle
+            Button {
+                item.isCompleted.toggle()
+            } label: {
+                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                    .font(.caption)
+                    .foregroundStyle(item.isCompleted ? .green : .secondary)
+            }
+            .buttonStyle(.plain)
+            
+            // Item title
+            if isEditing {
+                TextField("Item", text: $item.title)
+                    .font(.caption)
+                    .textFieldStyle(.plain)
+                    .focused($isFocused)
+                    .onSubmit {
+                        isEditing = false
+                    }
+                    .onChange(of: isFocused) { _, newValue in
+                        if !newValue {
+                            isEditing = false
+                        }
+                    }
+            } else {
+                Text(item.title)
+                    .font(.caption)
+                    .strikethrough(item.isCompleted)
+                    .foregroundStyle(item.isCompleted ? .secondary : .primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        isEditing = true
+                        isFocused = true
+                    }
+            }
+            
+            Spacer()
+            
+            // Drag handle on the right
+            Image(systemName: "line.3.horizontal")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .frame(width: 20)
+        }
+        .padding(.vertical, 4)
+        .padding(.horizontal, 4)
+        .background(Color(.systemGray6).opacity(0.5))
+        .cornerRadius(6)
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                showDeleteConfirmation = true
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .alert("Delete Item?", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                withAnimation {
+                    onDelete()
+                }
+            }
+        } message: {
+            Text("Are you sure you want to delete \"\(item.title)\"?")
+        }
+    }
+}
+
+// MARK: - Draggable Checklist Preview
+struct DraggableChecklistPreview: View {
+    let item: ChecklistItem
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "line.3.horizontal")
+                .foregroundStyle(.secondary)
+            Text(item.title)
+                .font(.caption)
+        }
+        .padding(8)
+        .background(Color(.systemGray5))
+        .cornerRadius(8)
     }
 }
 

@@ -9,7 +9,7 @@ import Foundation
 import SwiftUI
 
 struct PersonalityTrait: Identifiable, Hashable, Codable {
-    let id = UUID()
+    let id: UUID
     let name: String
     let description: String
     let icon: String
@@ -17,6 +17,14 @@ struct PersonalityTrait: Identifiable, Hashable, Codable {
     
     var instruction: String {
         description
+    }
+    
+    init(id: UUID = UUID(), name: String, description: String, icon: String, color: Color.RGBValues) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.icon = icon
+        self.color = color
     }
     
     static let allTraits: [PersonalityTrait] = [
