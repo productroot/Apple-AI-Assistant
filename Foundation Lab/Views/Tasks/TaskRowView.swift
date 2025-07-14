@@ -42,6 +42,7 @@ struct TaskRowView: View {
     @State private var loadedContacts: [CNContact] = []
     @State private var editingMentionedContacts: [CNContact] = []
     @State private var editedReminderTime: Date?
+    @State private var showingChecklistEditor = false
     // Reminder state is now managed by the integrated picker
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
@@ -216,6 +217,18 @@ struct TaskRowView: View {
         } message: {
             Text("Are you sure you want to delete \"\(task.title)\"?")
         }
+        .sheet(isPresented: $showingChecklistEditor) {
+            ChecklistEditView(
+                checklistItems: $task.checklistItems,
+                onSave: {
+                    // Save the updated task when checklist editing is done
+                    var updatedTask = task
+                    updatedTask.checklistItems = task.checklistItems
+                    viewModel.updateTask(updatedTask)
+                    print("💾 Saved checklist changes")
+                }
+            )
+        }
 
     }
     
@@ -356,7 +369,7 @@ struct TaskRowView: View {
                     }
                     .padding(.horizontal, 4)
                 }
-                .frame(height: 24)
+                .frame(minHeight: 24)
             }
             
             Spacer()
@@ -561,7 +574,7 @@ struct TaskRowView: View {
             }
             .padding(.horizontal, 4)
         }
-        .frame(height: 30)
+        .frame(minHeight: 30)
     }
     
     @ViewBuilder
@@ -594,57 +607,60 @@ struct TaskRowView: View {
     }
     
     @ViewBuilder
-    private var checklistItemsView: some View {
-        VStack(spacing: 2) {
-            ForEach(task.checklistItems.indices, id: \.self) { index in
-                let item = task.checklistItems[index]
-                InlineChecklistItemRow(
-                    item: $task.checklistItems[index],
-                    onDelete: {
-                        withAnimation {
-                            if index < task.checklistItems.count {
-                                task.checklistItems.remove(at: index)
-                                
-                                // Save the updated task after deletion
-                                var updatedTask = task
-                                updatedTask.checklistItems = task.checklistItems
-                                viewModel.updateTask(updatedTask)
-                                print("💾 Deleted checklist item and saved task")
-                            }
+    private var simpleChecklistView: some View {
+        VStack(spacing: 4) {
+            // Show all items when in editing mode, only first 3 in display mode
+            ForEach(isEditing ? task.checklistItems : Array(task.checklistItems.prefix(3)), id: \.id) { item in
+                HStack(spacing: 8) {
+                    // Completion toggle
+                    Button {
+                        if let index = task.checklistItems.firstIndex(where: { $0.id == item.id }) {
+                            task.checklistItems[index].isCompleted.toggle()
+                            
+                            // Save the updated task
+                            var updatedTask = task
+                            updatedTask.checklistItems = task.checklistItems
+                            viewModel.updateTask(updatedTask)
+                            print("✅ Toggled checklist item: \(item.title)")
                         }
-                    },
-                    onChange: {
-                        // Save the updated task after any change
-                        var updatedTask = task
-                        updatedTask.checklistItems = task.checklistItems
-                        viewModel.updateTask(updatedTask)
-                        print("💾 Updated checklist item and saved task")
+                    } label: {
+                        Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                            .font(.caption)
+                            .foregroundStyle(item.isCompleted ? .green : .secondary)
+                            .contentTransition(.symbolEffect)
                     }
-                )
-                .dropDestination(for: String.self) { droppedIDs, location in
-                    print("📍 Drop destination activated with \(droppedIDs.count) IDs")
-                    guard let droppedID = droppedIDs.first,
-                          let draggedID = UUID(uuidString: droppedID),
-                          let draggedIndex = task.checklistItems.firstIndex(where: { $0.id == draggedID }),
-                          let currentIndex = task.checklistItems.firstIndex(where: { $0.id == item.id }),
-                          draggedIndex != currentIndex else {
-                        print("   ❌ Invalid drop or same position")
-                        return false
-                    }
+                    .buttonStyle(.plain)
                     
-                    print("   ✅ Moving from index \(draggedIndex) to \(currentIndex)")
-                    withAnimation(.spring()) {
-                        task.checklistItems.move(fromOffsets: IndexSet(integer: draggedIndex),
-                                               toOffset: currentIndex > draggedIndex ? currentIndex + 1 : currentIndex)
-                    }
+                    // Item title
+                    Text(item.title)
+                        .font(.caption)
+                        .strikethrough(item.isCompleted)
+                        .foregroundStyle(item.isCompleted ? .secondary : .primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .lineLimit(1)
                     
-                    // Save the updated task after reordering
-                    var updatedTask = task
-                    updatedTask.checklistItems = task.checklistItems
-                    viewModel.updateTask(updatedTask)
-                    print("💾 Reordered checklist items and saved task")
-                    
-                    return true
+                    Spacer()
+                }
+                .padding(.vertical, 2)
+                .padding(.horizontal, 8)
+                .background(Color(.systemGray6).opacity(0.3))
+                .cornerRadius(4)
+            }
+            
+            // Show more indicator if there are more than 3 items and not in editing mode
+            if task.checklistItems.count > 3 && !isEditing {
+                HStack {
+                    Text("and \(task.checklistItems.count - 3) more...")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 8)
+                .onTapGesture {
+                    showingChecklistEditor = true
                 }
             }
         }
@@ -667,10 +683,24 @@ struct TaskRowView: View {
                         }
                         
                         Spacer()
+                        
+                        // Edit checklist button
+                        if !task.checklistItems.isEmpty {
+                            Button {
+                                print("🖊️ Pencil icon tapped - opening checklist editor")
+                                showingChecklistEditor = true
+                            } label: {
+                                Image(systemName: "pencil")
+                                    .font(.caption)
+                                    .foregroundStyle(.blue)
+                                    .padding(4)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                     
-                    // Checklist items
-                    checklistItemsView
+                    // Checklist items (simplified read-only view)
+                    simpleChecklistView
                     
                     // Add new item field
                     HStack(spacing: 8) {
@@ -742,12 +772,6 @@ struct TaskRowView: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(.systemGray6))
                 .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 2)
-                .onTapGesture {
-                    // Only save if tapping the background, not on interactive elements
-                    if !isTitleFocused && !isNotesFocused {
-                        saveTask()
-                    }
-                }
         )
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -942,145 +966,6 @@ struct TaskRowView: View {
     }
 }
 
-// MARK: - Checklist Item Row
-struct InlineChecklistItemRow: View {
-    @Binding var item: ChecklistItem
-    let onDelete: () -> Void
-    let onChange: () -> Void
-    @State private var isEditing = false
-    @State private var showDeleteConfirmation = false
-    @State private var deleteOffset: CGFloat = 0
-    @FocusState private var isFocused: Bool
-    
-    var body: some View {
-        ZStack(alignment: .trailing) {
-            // Delete button background
-            HStack {
-                Spacer()
-                Button {
-                    showDeleteConfirmation = true
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.caption)
-                        .foregroundStyle(.white)
-                        .frame(width: 60)
-                }
-                .frame(maxHeight: .infinity)
-                .background(Color.red)
-            }
-            .opacity(deleteOffset < -60 ? 1 : 0)
-            
-            // Main content
-            HStack(spacing: 8) {
-                // Completion toggle
-                Button {
-                    item.isCompleted.toggle()
-                    onChange()
-                } label: {
-                    Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                        .font(.caption)
-                        .foregroundStyle(item.isCompleted ? .green : .secondary)
-                }
-                .buttonStyle(.plain)
-                
-                // Item title
-                if isEditing {
-                    TextField("Item", text: $item.title)
-                        .font(.caption)
-                        .textFieldStyle(.plain)
-                        .focused($isFocused)
-                        .onSubmit {
-                            isEditing = false
-                            onChange()
-                        }
-                        .onChange(of: isFocused) { _, newValue in
-                            if !newValue {
-                                isEditing = false
-                                onChange()
-                            }
-                        }
-                } else {
-                    Text(item.title)
-                        .font(.caption)
-                        .strikethrough(item.isCompleted)
-                        .foregroundStyle(item.isCompleted ? .secondary : .primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            isEditing = true
-                            isFocused = true
-                        }
-                }
-                
-                Spacer()
-                
-                // Drag handle on the right
-                Image(systemName: "line.3.horizontal")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .padding(8)
-                    .contentShape(Rectangle())
-                    .draggable(item) {
-                        DraggableChecklistPreview(item: item)
-                    }
-            }
-            .padding(.vertical, 4)
-            .padding(.horizontal, 4)
-            .background(Color(.systemGray6).opacity(0.5))
-            .cornerRadius(6)
-            .offset(x: deleteOffset)
-            .highPriorityGesture(
-                DragGesture()
-                    .onChanged { value in
-                        // Only respond to horizontal swipes, not vertical drags
-                        if abs(value.translation.width) > abs(value.translation.height) && value.translation.width < 0 {
-                            deleteOffset = max(value.translation.width, -80)
-                        }
-                    }
-                    .onEnded { value in
-                        withAnimation(.spring()) {
-                            if value.translation.width < -60 && abs(value.translation.width) > abs(value.translation.height) {
-                                deleteOffset = -80
-                            } else {
-                                deleteOffset = 0
-                            }
-                        }
-                    }
-            )
-        }
-        .alert("Delete Item?", isPresented: $showDeleteConfirmation) {
-            Button("Cancel", role: .cancel) {
-                withAnimation {
-                    deleteOffset = 0
-                }
-            }
-            Button("Delete", role: .destructive) {
-                withAnimation {
-                    onDelete()
-                }
-            }
-        } message: {
-            Text("Are you sure you want to delete \"\(item.title)\"?")
-        }
-    }
-}
-
-// MARK: - Draggable Checklist Preview
-struct DraggableChecklistPreview: View {
-    let item: ChecklistItem
-    
-    var body: some View {
-        HStack {
-            Image(systemName: "line.3.horizontal")
-                .foregroundStyle(.secondary)
-            Text(item.title)
-                .font(.caption)
-        }
-        .padding(8)
-        .background(Color(.systemGray5))
-        .cornerRadius(8)
-    }
-}
 
 
 // MARK: - Custom Date Picker View
