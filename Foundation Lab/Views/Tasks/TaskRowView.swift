@@ -39,6 +39,8 @@ struct TaskRowView: View {
     @State private var showingDeleteAlert = false
     @State private var loadedContacts: [CNContact] = []
     @State private var editingMentionedContacts: [CNContact] = []
+    @State private var editedReminderTime: Date?
+    @State private var hasReminder: Bool = false
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
     @FocusState private var isNewChecklistItemFocused: Bool
@@ -70,6 +72,8 @@ struct TaskRowView: View {
         _editedRecurrenceRule = State(initialValue: task.recurrenceRule)
         _editedCustomRecurrence = State(initialValue: task.customRecurrence)
         _editedDuration = State(initialValue: task.estimatedDuration)
+        _editedReminderTime = State(initialValue: task.reminderTime)
+        _hasReminder = State(initialValue: task.reminderTime != nil)
     }
 
     var body: some View {
@@ -92,6 +96,9 @@ struct TaskRowView: View {
                     onEditingChanged?(true, task)
                     // Load mentioned contacts for editing
                     editingMentionedContacts = loadedContacts
+                    // Initialize reminder states
+                    hasReminder = task.reminderTime != nil
+                    editedReminderTime = task.reminderTime
                 }
                 // Don't focus automatically - let user tap to show keyboard
             } else if !isEditing {
@@ -118,6 +125,9 @@ struct TaskRowView: View {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         isEditing = true
                         onEditingChanged?(true, task)
+                        // Initialize reminder states
+                        hasReminder = task.reminderTime != nil
+                        editedReminderTime = task.reminderTime
                     }
                 } label: {
                     Label("Edit", systemImage: "pencil")
@@ -327,7 +337,7 @@ struct TaskRowView: View {
     private var expandedEditView: some View {
                  VStack(spacing: 0) {
              // Main editing area
-             VStack(spacing: 16) {
+             VStack(spacing: 12) {
                                  // Title Field
                  MentionableTextField(
                      text: $editedTitle,
@@ -336,6 +346,10 @@ struct TaskRowView: View {
                  )
                  .font(.body)
                  .textFieldStyle(.plain)
+                 .padding(.horizontal, 12)
+                 .padding(.vertical, 8)
+                 .background(Color(.systemGray5))
+                 .cornerRadius(8)
                  .focused($isTitleFocused)
                      .submitLabel(.done)
                      .onSubmit {
@@ -362,6 +376,9 @@ struct TaskRowView: View {
                  )
                  .font(.body)
                  .frame(minHeight: 60, maxHeight: 120)
+                 .padding(8)
+                 .background(Color(.systemGray5))
+                 .cornerRadius(8)
                  .focused($isNotesFocused)
                      .onSubmit {
                          isTitleFocused = false
@@ -369,126 +386,228 @@ struct TaskRowView: View {
                          saveTask()
                      }
                 
-                // Metadata Row
-                HStack(spacing: 16) {
-                    // Priority Picker
-                    Menu {
-                        ForEach(TodoTask.Priority.allCases, id: \.self) { priority in
-                            Button {
-                                editedPriority = priority
-                            } label: {
-                                Label(priority.name, systemImage: priority.icon)
-                                    .foregroundStyle(priority.color)
+                // Metadata Grid - Two rows for better layout
+                VStack(spacing: 8) {
+                    // First Row: Priority, Date, Reminder Toggle
+                    HStack(spacing: 8) {
+                        // Priority Picker
+                        Menu {
+                            ForEach(TodoTask.Priority.allCases, id: \.self) { priority in
+                                Button {
+                                    editedPriority = priority
+                                } label: {
+                                    Label(priority.name, systemImage: priority.icon)
+                                        .foregroundStyle(priority.color)
+                                }
                             }
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: editedPriority.icon)
-                                .foregroundStyle(editedPriority.color)
-                            Text(editedPriority.name)
-                                .foregroundStyle(.secondary)
-                        }
-                        .font(.caption)
-                    }
-                    
-                    // Date Picker
-                    Menu {
-                        Button("Today") { editedScheduledDate = Date() }
-                        Button("Tomorrow") { editedScheduledDate = Calendar.current.date(byAdding: .day, value: 1, to: Date()) }
-                        Button("Next Week") { editedScheduledDate = Calendar.current.date(byAdding: .day, value: 7, to: Date()) }
-                        Divider()
-                        Button("Custom...") { showingDatePicker = true }
-                        Divider()
-                        Button("No Date", role: .destructive) { editedScheduledDate = nil }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "calendar")
-                            Text(editedScheduledDate?.formatted(date: .abbreviated, time: .omitted) ?? "No Date")
-                                .foregroundStyle(.secondary)
-                        }
-                        .font(.caption)
-                    }
-                    
-                    // Recurrence Picker
-                    Menu {
-                        Button("None") {
-                            editedRecurrenceRule = nil
-                            editedCustomRecurrence = nil
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: editedPriority.icon)
+                                    .foregroundStyle(editedPriority.color)
+                                if editedPriority != .none {
+                                    Text(editedPriority.name)
+                                        .foregroundStyle(.primary)
+                                }
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color(.systemGray5))
+                            .cornerRadius(6)
                         }
                         
-                        Divider()
+                        // Date Picker
+                        Menu {
+                            Button("Today") { editedScheduledDate = Date() }
+                            Button("Tomorrow") { editedScheduledDate = Calendar.current.date(byAdding: .day, value: 1, to: Date()) }
+                            Button("Next Week") { editedScheduledDate = Calendar.current.date(byAdding: .day, value: 7, to: Date()) }
+                            Divider()
+                            Button("Custom...") { showingDatePicker = true }
+                            Divider()
+                            Button("No Date", role: .destructive) { 
+                                editedScheduledDate = nil
+                                hasReminder = false
+                                editedReminderTime = nil
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "calendar")
+                                    .foregroundStyle(editedScheduledDate != nil ? .blue : .secondary)
+                                if let date = editedScheduledDate {
+                                    Text(date, format: .dateTime.month(.abbreviated).day())
+                                        .foregroundStyle(.primary)
+                                }
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color(.systemGray5))
+                            .cornerRadius(6)
+                        }
                         
-                        ForEach(RecurrenceRule.allCases.filter { $0 != .custom }, id: \.self) { rule in
-                            Button {
-                                editedRecurrenceRule = rule
+                        // Reminder Toggle (only show if scheduled date is set)
+                        if editedScheduledDate != nil {
+                            HStack(spacing: 6) {
+                                Image(systemName: hasReminder ? "bell.fill" : "bell")
+                                    .foregroundStyle(hasReminder ? .blue : .secondary)
+                                    .font(.caption)
+                                
+                                Toggle("", isOn: $hasReminder)
+                                    .labelsHidden()
+                                    .scaleEffect(0.8)
+                                    .onChange(of: hasReminder) { _, enabled in
+                                        if enabled {
+                                            // Set default reminder time to 9 AM
+                                            if editedReminderTime == nil {
+                                                let calendar = Calendar.current
+                                                var components = calendar.dateComponents([.year, .month, .day], from: editedScheduledDate!)
+                                                components.hour = 9
+                                                components.minute = 0
+                                                editedReminderTime = calendar.date(from: components)
+                                            }
+                                        } else {
+                                            editedReminderTime = nil
+                                        }
+                                    }
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color(.systemGray5))
+                            .cornerRadius(6)
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    // Second Row: Recurrence, Duration
+                    HStack(spacing: 8) {
+                        // Recurrence Picker
+                        Menu {
+                            Button("None") {
+                                editedRecurrenceRule = nil
                                 editedCustomRecurrence = nil
+                            }
+                            
+                            Divider()
+                            
+                            ForEach(RecurrenceRule.allCases.filter { $0 != .custom }, id: \.self) { rule in
+                                Button {
+                                    editedRecurrenceRule = rule
+                                    editedCustomRecurrence = nil
+                                } label: {
+                                    Label(rule.displayName, systemImage: rule.icon)
+                                }
+                            }
+                            
+                            Divider()
+                            
+                            Button {
+                                showingCustomRecurrence = true
                             } label: {
-                                Label(rule.displayName, systemImage: rule.icon)
+                                Label("Custom...", systemImage: "gearshape")
                             }
-                        }
-                        
-                        Divider()
-                        
-                        Button {
-                            showingCustomRecurrence = true
                         } label: {
-                            Label("Custom...", systemImage: "gearshape")
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: editedRecurrenceRule?.icon ?? "arrow.clockwise")
-                                .foregroundStyle(editedRecurrenceRule != nil ? .purple : .secondary)
-                            Text(recurrenceDisplayText)
-                                .foregroundStyle(.secondary)
-                        }
-                        .font(.caption)
-                    }
-                    
-                    // Duration Picker
-                    Menu {
-                        Button("15 min") { editedDuration = 15 * 60 }
-                        Button("30 min") { editedDuration = 30 * 60 }
-                        Button("1 hour") { editedDuration = 60 * 60 }
-                        Button("2 hours") { editedDuration = 2 * 60 * 60 }
-                        Button("4 hours") { editedDuration = 4 * 60 * 60 }
-                        Button("8 hours") { editedDuration = 8 * 60 * 60 }
-                        
-                        Divider()
-                        
-                        Button {
-                            generateDurationEstimate()
-                        } label: {
-                            Label("AI Estimate", systemImage: "sparkles")
-                        }
-                        
-                        Divider()
-                        
-                        Button("No Duration", role: .destructive) { editedDuration = nil }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "clock")
-                                .foregroundStyle(editedDuration != nil ? .orange : .secondary)
-                            if isGeneratingDuration {
-                                ProgressView()
-                                    .scaleEffect(0.7)
-                            } else {
-                                Text(durationDisplayText)
-                                    .foregroundStyle(.secondary)
+                            HStack(spacing: 4) {
+                                Image(systemName: editedRecurrenceRule?.icon ?? "arrow.clockwise")
+                                    .foregroundStyle(editedRecurrenceRule != nil ? .purple : .secondary)
+                                if editedRecurrenceRule != nil {
+                                    Text(recurrenceDisplayText)
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(1)
+                                }
                             }
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color(.systemGray5))
+                            .cornerRadius(6)
                         }
-                        .font(.caption)
+                        
+                        // Duration Picker
+                        Menu {
+                            Button("15 min") { editedDuration = 15 * 60 }
+                            Button("30 min") { editedDuration = 30 * 60 }
+                            Button("1 hour") { editedDuration = 60 * 60 }
+                            Button("2 hours") { editedDuration = 2 * 60 * 60 }
+                            Button("4 hours") { editedDuration = 4 * 60 * 60 }
+                            Button("8 hours") { editedDuration = 8 * 60 * 60 }
+                            
+                            Divider()
+                            
+                            Button {
+                                generateDurationEstimate()
+                            } label: {
+                                Label("AI Estimate", systemImage: "sparkles")
+                            }
+                            
+                            Divider()
+                            
+                            Button("No Duration", role: .destructive) { editedDuration = nil }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "clock")
+                                    .foregroundStyle(editedDuration != nil ? .orange : .secondary)
+                                if isGeneratingDuration {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                } else {
+                                    if editedDuration != nil {
+                                        Text(durationDisplayText)
+                                            .foregroundStyle(.primary)
+                                            .lineLimit(1)
+                                    }
+                                }
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color(.systemGray5))
+                            .cornerRadius(6)
+                        }
+                        .disabled(isGeneratingDuration)
+                        
+                        Spacer()
                     }
-                    .disabled(isGeneratingDuration)
-                                         
-                     Spacer()
-                 }
+                }
+                
+                // Reminder Time Row (show when reminder is enabled)
+                if hasReminder && editedScheduledDate != nil {
+                    HStack {
+                        Label("Reminder", systemImage: "bell.fill")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                        
+                        Spacer()
+                        
+                        DatePicker(
+                            "",
+                            selection: Binding(
+                                get: { editedReminderTime ?? Date() },
+                                set: { editedReminderTime = $0 }
+                            ),
+                            displayedComponents: .hourAndMinute
+                        )
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                        .tint(.blue)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color(.systemBackground))
+                                .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        )
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemGray5))
+                    .cornerRadius(8)
+                }
                 
                 // Mentioned Contacts Section
                 if !editingMentionedContacts.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("Mentioned Contacts", systemImage: "person.2")
+                        Label("Mentioned Contacts", systemImage: "person.2.fill")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.indigo)
                         
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
@@ -516,7 +635,7 @@ struct TaskRowView: View {
                         HStack {
                             Label("Checklist", systemImage: "checklist")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.green)
                             
                             if !task.checklistItems.isEmpty {
                                 Text("\(task.checklistItems.filter { $0.isCompleted }.count)/\(task.checklistItems.count)")
@@ -587,12 +706,15 @@ struct TaskRowView: View {
                 }
                 .disabled(isGeneratingChecklist)
              }
-             .padding(.horizontal)
-             .padding(.vertical, 12)
-             .background(Color(.systemGray6))
+             .padding(.horizontal, 16)
+             .padding(.vertical, 16)
         }
-        .background(Color(.systemGray6))
-        .padding(.horizontal)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemGray6))
+                .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 2)
+        )
+        .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .contentShape(Rectangle())
         .onTapGesture {
@@ -617,6 +739,7 @@ struct TaskRowView: View {
         updatedTask.recurrenceRule = editedRecurrenceRule
         updatedTask.customRecurrence = editedCustomRecurrence
         updatedTask.estimatedDuration = editedDuration
+        updatedTask.reminderTime = hasReminder ? editedReminderTime : nil
         
         // Clear custom recurrence if not using custom rule
         if editedRecurrenceRule != .custom {

@@ -24,6 +24,8 @@ struct AddTaskView: View {
     @State private var tags: String = ""
     @State private var showDatePicker = false
     @State private var mentionedContacts: [CNContact] = []
+    @State private var reminderTime: Date?
+    @State private var hasReminder = false
     
     var body: some View {
         NavigationStack {
@@ -73,6 +75,13 @@ struct AddTaskView: View {
                         .background(Color(.systemBackground))
                         .cornerRadius(8)
                     }
+                    
+                    // Reminder
+                    ReminderTimePicker(
+                        reminderTime: $reminderTime,
+                        hasReminder: $hasReminder,
+                        scheduledDate: scheduledDate
+                    )
                 }
                 
                 Section {
@@ -170,7 +179,8 @@ struct AddTaskView: View {
             projectId: selectedProject?.id,
             areaId: selectedArea?.id,
             priority: priority,
-            mentionedContactIds: mentionedContacts.map { $0.identifier }
+            mentionedContactIds: mentionedContacts.map { $0.identifier },
+            reminderTime: hasReminder ? reminderTime : nil
         )
         
         viewModel.addTask(task)

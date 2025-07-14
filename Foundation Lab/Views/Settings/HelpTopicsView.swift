@@ -48,6 +48,12 @@ struct HelpTopicsView: View {
                 )
                 
                 HelpTopicRow(
+                    icon: "bell",
+                    title: "Task Reminders",
+                    description: "Set system reminders for scheduled tasks"
+                )
+                
+                HelpTopicRow(
                     icon: "arrow.clockwise",
                     title: "Recurring Tasks",
                     description: "Set up tasks that repeat automatically"
@@ -447,6 +453,49 @@ let helpContent: [String: (overview: String, sections: [HelpSection])] = [
                     HelpItem(type: .text, content: "Scheduled Date: When you plan to work on it"),
                     HelpItem(type: .text, content: "Due Date: Hard deadline for completion"),
                     HelpItem(type: .warning, content: "Overdue tasks appear in red")
+                ]
+            )
+        ]
+    ),
+    
+    "Task Reminders": (
+        overview: "Set system reminders for your scheduled tasks",
+        sections: [
+            HelpSection(
+                title: "Creating Reminders",
+                content: [
+                    HelpItem(type: .step, content: "Schedule a task for a specific date"),
+                    HelpItem(type: .step, content: "Toggle the Reminder switch"),
+                    HelpItem(type: .step, content: "Select a time for the reminder"),
+                    HelpItem(type: .step, content: "Save the task to create the reminder"),
+                    HelpItem(type: .tip, content: "Reminders appear in the system Reminders app")
+                ]
+            ),
+            HelpSection(
+                title: "Managing Reminders",
+                content: [
+                    HelpItem(type: .text, content: "Edit task to change reminder time"),
+                    HelpItem(type: .text, content: "Toggle off to remove reminder"),
+                    HelpItem(type: .text, content: "Completing task marks reminder as complete"),
+                    HelpItem(type: .warning, content: "Requires Reminders app permission")
+                ]
+            ),
+            HelpSection(
+                title: "Quick Time Options",
+                content: [
+                    HelpItem(type: .text, content: "8:00 AM - Morning reminder"),
+                    HelpItem(type: .text, content: "9:00 AM - Start of work day"),
+                    HelpItem(type: .text, content: "12:00 PM - Lunchtime reminder"),
+                    HelpItem(type: .text, content: "5:00 PM - End of work day"),
+                    HelpItem(type: .text, content: "Custom - Set any specific time")
+                ]
+            ),
+            HelpSection(
+                title: "Integration with Recurring Tasks",
+                content: [
+                    HelpItem(type: .text, content: "Reminders are created for each occurrence"),
+                    HelpItem(type: .text, content: "Reminder time is preserved across recurrences"),
+                    HelpItem(type: .tip, content: "Perfect for daily routines and habits")
                 ]
             )
         ]

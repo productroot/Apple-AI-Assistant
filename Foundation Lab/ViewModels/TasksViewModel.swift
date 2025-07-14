@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import Observation
 import FoundationModels
+import EventKit
 
 @Observable
 final class TasksViewModel {
@@ -115,14 +116,77 @@ final class TasksViewModel {
     
     // MARK: - Task Management
     func addTask(_ task: TodoTask) {
-        tasks.append(task)
+        var taskToAdd = task
+        
+        // Create reminder if task has reminder time
+        if task.reminderTime != nil && task.scheduledDate != nil {
+            Task {
+                do {
+                    if let reminderId = try await TaskReminderService.shared.createReminder(for: task) {
+                        taskToAdd.reminderId = reminderId
+                        print("📱 Created reminder for task: \(task.title)")
+                    }
+                } catch {
+                    print("❌ Failed to create reminder: \(error)")
+                }
+            }
+        }
+        
+        tasks.append(taskToAdd)
         saveToiCloudIfEnabled()
     }
     
     func updateTask(_ task: TodoTask) {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
             let oldTask = tasks[index]
-            tasks[index] = task
+            var updatedTask = task
+            
+            // Handle reminder changes
+            Task {
+                // Case 1: Reminder was removed
+                if oldTask.reminderTime != nil && task.reminderTime == nil {
+                    if let reminderId = oldTask.reminderId {
+                        do {
+                            try await TaskReminderService.shared.deleteReminder(reminderId: reminderId)
+                            updatedTask.reminderId = nil
+                            print("🗑️ Deleted reminder for task: \(task.title)")
+                        } catch {
+                            print("❌ Failed to delete reminder: \(error)")
+                        }
+                    }
+                }
+                // Case 2: Reminder was added or changed
+                else if task.reminderTime != nil && task.scheduledDate != nil {
+                    if let existingReminderId = oldTask.reminderId {
+                        // Update existing reminder
+                        do {
+                            try await TaskReminderService.shared.updateReminder(reminderId: existingReminderId, for: task)
+                            print("📱 Updated reminder for task: \(task.title)")
+                        } catch {
+                            print("❌ Failed to update reminder: \(error)")
+                        }
+                    } else {
+                        // Create new reminder
+                        do {
+                            if let reminderId = try await TaskReminderService.shared.createReminder(for: task) {
+                                updatedTask.reminderId = reminderId
+                                print("📱 Created reminder for task: \(task.title)")
+                                
+                                // Update the task in the array with the new reminder ID
+                                await MainActor.run {
+                                    if let idx = self.tasks.firstIndex(where: { $0.id == task.id }) {
+                                        self.tasks[idx].reminderId = reminderId
+                                    }
+                                }
+                            }
+                        } catch {
+                            print("❌ Failed to create reminder: \(error)")
+                        }
+                    }
+                }
+            }
+            
+            tasks[index] = updatedTask
             
             // Track duration changes
             if oldTask.estimatedDuration != task.estimatedDuration,
@@ -140,6 +204,18 @@ final class TasksViewModel {
     }
     
     func deleteTask(_ task: TodoTask) {
+        // Delete associated reminder if exists
+        if let reminderId = task.reminderId {
+            Task {
+                do {
+                    try await TaskReminderService.shared.deleteReminder(reminderId: reminderId)
+                    print("🗑️ Deleted reminder for task: \(task.title)")
+                } catch {
+                    print("❌ Failed to delete reminder: \(error)")
+                }
+            }
+        }
+        
         tasks.removeAll { $0.id == task.id }
         selectedTasks.remove(task.id)
         saveToiCloudIfEnabled()
@@ -166,6 +242,18 @@ final class TasksViewModel {
         if updatedTask.isCompleted {
             // Task is being completed
             updatedTask.completionDate = Date()
+            
+            // Complete associated reminder if exists
+            if let reminderId = updatedTask.reminderId {
+                Task {
+                    do {
+                        try await TaskReminderService.shared.completeReminder(reminderId: reminderId)
+                        print("✅ Completed reminder for task: \(updatedTask.title)")
+                    } catch {
+                        print("❌ Failed to complete reminder: \(error)")
+                    }
+                }
+            }
             
             // Calculate actual duration if task was started
             if let startedAt = updatedTask.startedAt {
@@ -198,7 +286,8 @@ final class TasksViewModel {
                 projectId: updatedTask.projectId,
                 areaId: updatedTask.areaId,
                 priority: updatedTask.priority,
-                estimatedDuration: updatedTask.estimatedDuration
+                estimatedDuration: updatedTask.estimatedDuration,
+                reminderTime: updatedTask.reminderTime
             )
             
             // Set the recurrence info

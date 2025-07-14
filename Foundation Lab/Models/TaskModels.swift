@@ -134,6 +134,8 @@ struct TodoTask: Identifiable, Hashable, Codable, Sendable {
     var mentionedContactIds: [String] = [] // Contact identifiers for mentioned contacts
     var titleMentions: [MentionPosition] = [] // Track where mentions appear in title
     var notesMentions: [MentionPosition] = [] // Track where mentions appear in notes
+    var reminderTime: Date? // Time for the reminder (combined with scheduledDate)
+    var reminderId: String? // EventKit reminder identifier for tracking
     
     enum Priority: String, CaseIterable, Codable {
         case none = "none"

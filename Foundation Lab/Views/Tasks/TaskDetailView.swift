@@ -21,6 +21,7 @@ struct TaskDetailView: View {
     @State private var generationError: String?
     @State private var mentionedContacts: [CNContact] = []
     @State private var loadedContacts: [CNContact] = []
+    @State private var hasReminder: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -84,9 +85,72 @@ struct TaskDetailView: View {
                                 .font(.caption)
                                 .foregroundStyle(.red)
                             }
+                            
+                            if let reminderTime = task.reminderTime {
+                                Label {
+                                    Text(reminderTime, style: .time)
+                                } icon: {
+                                    Image(systemName: "bell.fill")
+                                }
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                            }
                         }
                     }
                     .padding(.horizontal)
+                    
+                    // Date and Reminder Section (Edit Mode)
+                    if isEditing {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Schedule")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            VStack(spacing: 12) {
+                                // Scheduled Date Toggle and Picker
+                                HStack {
+                                    Label("When", systemImage: "calendar")
+                                    Spacer()
+                                    if task.scheduledDate != nil {
+                                        DatePicker(
+                                            "",
+                                            selection: Binding(
+                                                get: { task.scheduledDate ?? Date() },
+                                                set: { task.scheduledDate = $0 }
+                                            ),
+                                            displayedComponents: .date
+                                        )
+                                        .labelsHidden()
+                                        
+                                        Button {
+                                            task.scheduledDate = nil
+                                            task.reminderTime = nil
+                                            hasReminder = false
+                                        } label: {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .foregroundColor(.secondary)
+                                                .font(.caption)
+                                        }
+                                    } else {
+                                        Button("Set Date") {
+                                            task.scheduledDate = Date()
+                                        }
+                                        .foregroundColor(.blue)
+                                    }
+                                }
+                                .padding(.horizontal)
+                                
+                                // Reminder Time Picker
+                                ReminderTimePicker(
+                                    reminderTime: $task.reminderTime,
+                                    hasReminder: $hasReminder,
+                                    scheduledDate: task.scheduledDate
+                                )
+                                .padding(.horizontal)
+                            }
+                        }
+                        .padding(.bottom, 8)
+                    }
                     
                     // Notes Section
                     if isEditing || !task.notes.isEmpty {
@@ -279,10 +343,12 @@ struct TaskDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 loadMentionedContacts()
+                hasReminder = task.reminderTime != nil
             }
             .onChange(of: isEditing) { oldValue, newValue in
                 if newValue {
                     mentionedContacts = loadedContacts
+                    hasReminder = task.reminderTime != nil
                 } else {
                     loadMentionedContacts()
                 }
@@ -305,6 +371,9 @@ struct TaskDetailView: View {
                     if isEditing {
                         Button("Save") {
                             task.mentionedContactIds = mentionedContacts.map { $0.identifier }
+                            if !hasReminder {
+                                task.reminderTime = nil
+                            }
                             viewModel.updateTask(task)
                             isEditing = false
                             print("✅ Saved task with \(mentionedContacts.count) mentioned contacts")
