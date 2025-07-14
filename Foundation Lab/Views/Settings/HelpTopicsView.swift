@@ -462,32 +462,43 @@ let helpContent: [String: (overview: String, sections: [HelpSection])] = [
         overview: "Set system reminders for your scheduled tasks",
         sections: [
             HelpSection(
-                title: "Creating Reminders",
+                title: "Integrated Date & Reminder System",
                 content: [
-                    HelpItem(type: .step, content: "Schedule a task for a specific date"),
-                    HelpItem(type: .step, content: "Toggle the Reminder switch"),
-                    HelpItem(type: .step, content: "Select a time for the reminder"),
-                    HelpItem(type: .step, content: "Save the task to create the reminder"),
-                    HelpItem(type: .tip, content: "Reminders appear in the system Reminders app")
+                    HelpItem(type: .text, content: "Date and reminder selection are now integrated in one interface"),
+                    HelpItem(type: .text, content: "Quick options automatically set both date and reminder time"),
+                    HelpItem(type: .text, content: "Custom date selection includes optional time picker"),
+                    HelpItem(type: .tip, content: "Tap the date button to access all scheduling options")
+                ]
+            ),
+            HelpSection(
+                title: "Quick Scheduling Options",
+                content: [
+                    HelpItem(type: .text, content: "Today - Sets reminder for 9 AM or 1 hour from now"),
+                    HelpItem(type: .text, content: "This Evening - Today at 6 PM"),
+                    HelpItem(type: .text, content: "Tomorrow - Tomorrow at 9 AM"),
+                    HelpItem(type: .text, content: "This Weekend - Saturday at 10 AM"),
+                    HelpItem(type: .text, content: "Next Week - Monday at 9 AM"),
+                    HelpItem(type: .text, content: "Someday - No date or reminder")
+                ]
+            ),
+            HelpSection(
+                title: "Custom Date & Time",
+                content: [
+                    HelpItem(type: .step, content: "Tap the date picker button"),
+                    HelpItem(type: .step, content: "Select or tap 'Custom' for calendar view"),
+                    HelpItem(type: .step, content: "Toggle 'Time' to add a reminder"),
+                    HelpItem(type: .step, content: "Use the time wheel to set reminder time"),
+                    HelpItem(type: .step, content: "Tap 'Set' to apply your selection")
                 ]
             ),
             HelpSection(
                 title: "Managing Reminders",
                 content: [
-                    HelpItem(type: .text, content: "Edit task to change reminder time"),
-                    HelpItem(type: .text, content: "Toggle off to remove reminder"),
+                    HelpItem(type: .text, content: "Bell badge icon indicates a reminder is set"),
+                    HelpItem(type: .text, content: "Edit task to change date or reminder time"),
+                    HelpItem(type: .text, content: "Select 'Someday' to remove date and reminder"),
                     HelpItem(type: .text, content: "Completing task marks reminder as complete"),
                     HelpItem(type: .warning, content: "Requires Reminders app permission")
-                ]
-            ),
-            HelpSection(
-                title: "Quick Time Options",
-                content: [
-                    HelpItem(type: .text, content: "8:00 AM - Morning reminder"),
-                    HelpItem(type: .text, content: "9:00 AM - Start of work day"),
-                    HelpItem(type: .text, content: "12:00 PM - Lunchtime reminder"),
-                    HelpItem(type: .text, content: "5:00 PM - End of work day"),
-                    HelpItem(type: .text, content: "Custom - Set any specific time")
                 ]
             ),
             HelpSection(

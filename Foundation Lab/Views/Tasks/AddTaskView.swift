@@ -25,7 +25,7 @@ struct AddTaskView: View {
     @State private var showDatePicker = false
     @State private var mentionedContacts: [CNContact] = []
     @State private var reminderTime: Date?
-    @State private var hasReminder = false
+    @State private var showIntegratedDatePicker = false
     
     var body: some View {
         NavigationStack {
@@ -56,15 +56,20 @@ struct AddTaskView: View {
                         }
                     }
                     
-                    // Schedule Date
-                    HStack {
-                        Label("When", systemImage: "calendar")
-                        Spacer()
-                        Button(scheduledDate?.formatted(date: .abbreviated, time: .omitted) ?? "No Date") {
-                            showDatePicker.toggle()
+                    // Integrated Date & Reminder
+                    Button {
+                        showIntegratedDatePicker = true
+                    } label: {
+                        HStack {
+                            Label("When", systemImage: "calendar")
+                            Spacer()
+                            DateReminderMenuLabel(
+                                scheduledDate: scheduledDate,
+                                reminderTime: reminderTime
+                            )
                         }
-                        .foregroundStyle(.blue)
                     }
+                    .foregroundStyle(.primary)
                     
                     // Due Date
                     if let scheduledDate {
@@ -75,13 +80,6 @@ struct AddTaskView: View {
                         .background(Color(.systemBackground))
                         .cornerRadius(8)
                     }
-                    
-                    // Reminder
-                    ReminderTimePicker(
-                        reminderTime: $reminderTime,
-                        hasReminder: $hasReminder,
-                        scheduledDate: scheduledDate
-                    )
                 }
                 
                 Section {
@@ -151,8 +149,12 @@ struct AddTaskView: View {
                     .disabled(title.isEmpty)
                 }
             }
-            .sheet(isPresented: $showDatePicker) {
-                DatePickerSheet(selectedDate: $scheduledDate)
+            .sheet(isPresented: $showIntegratedDatePicker) {
+                IntegratedDateReminderPicker(
+                    scheduledDate: $scheduledDate,
+                    reminderTime: $reminderTime
+                )
+                .presentationDetents([.large])
             }
             .onAppear {
                 if let preselectedProject {
@@ -180,7 +182,7 @@ struct AddTaskView: View {
             areaId: selectedArea?.id,
             priority: priority,
             mentionedContactIds: mentionedContacts.map { $0.identifier },
-            reminderTime: hasReminder ? reminderTime : nil
+            reminderTime: reminderTime
         )
         
         viewModel.addTask(task)
