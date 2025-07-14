@@ -22,6 +22,7 @@ struct TasksView: View {
     @State private var showingRecurrenceSuggestions = false
     @State private var showingDependencyGraph = false
     @State private var showingInsightsDashboard = false
+    @AppStorage("showTaskExplainers") private var showExplainers = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var body: some View {
@@ -52,88 +53,88 @@ struct TasksView: View {
             TasksSectionDetailView(viewModel: viewModel, filter: filter)
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Menu {
-                    Button {
-                        showingOptimization = true
-                    } label: {
-                        Label("Optimize Tasks", systemImage: "sparkles")
-                    }
-                    
-                    Button {
-                        showingWorkloadBalance = true
-                    } label: {
-                        Label("Workload Balance", systemImage: "chart.bar.fill")
-                    }
-                    
-                    Button {
-                        showingRecurrenceSuggestions = true
-                    } label: {
-                        Label("Detect Patterns", systemImage: "arrow.clockwise")
-                    }
-                    
-                    Divider()
-                    
-                    Button {
-                        showingDependencyGraph = true
-                    } label: {
-                        Label("Task Dependencies", systemImage: "network")
-                    }
-                    
-                    Button {
-                        showingInsightsDashboard = true
-                    } label: {
-                        Label("Productivity Insights", systemImage: "chart.line.uptrend.xyaxis")
-                    }
-                } label: {
-                    Label("AI Tools", systemImage: "sparkles")
-                }
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                EditButton()
-            }
+            aiToolsButton
+            helpAndEditButtons
         }
         .environment(\.editMode, $editMode)
-        .sheet(isPresented: $showingAddTask) {
-            AddTaskView(viewModel: viewModel)
-        }
-        .sheet(item: $areaToEdit) { area in
-            EditAreaView(viewModel: viewModel, area: area)
-        }
-        .sheet(item: $projectToEdit) { project in
-            EditProjectView(viewModel: viewModel, project: project)
-        }
-        .alert("Delete Area", isPresented: $showingDeleteAreaAlert, presenting: areaToDelete) { area in
-            Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) {
-                deleteArea(area)
+        .modifier(TasksViewSheets(
+            showingAddTask: $showingAddTask,
+            showingOptimization: $showingOptimization,
+            showingWorkloadBalance: $showingWorkloadBalance,
+            showingRecurrenceSuggestions: $showingRecurrenceSuggestions,
+            showingDependencyGraph: $showingDependencyGraph,
+            showingInsightsDashboard: $showingInsightsDashboard,
+            areaToEdit: $areaToEdit,
+            projectToEdit: $projectToEdit,
+            viewModel: viewModel
+        ))
+        .modifier(TasksViewAlerts(
+            showingDeleteAreaAlert: $showingDeleteAreaAlert,
+            showingDeleteProjectAlert: $showingDeleteProjectAlert,
+            areaToDelete: $areaToDelete,
+            projectToDelete: $projectToDelete,
+            deleteArea: deleteArea,
+            deleteProject: deleteProject
+        ))
+    }
+    
+    @ToolbarContentBuilder
+    private var aiToolsButton: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
+            Menu {
+                Button {
+                    showingOptimization = true
+                } label: {
+                    Label("Optimize Tasks", systemImage: "sparkles")
+                }
+                
+                Button {
+                    showingWorkloadBalance = true
+                } label: {
+                    Label("Workload Balance", systemImage: "chart.bar.fill")
+                }
+                
+                Button {
+                    showingRecurrenceSuggestions = true
+                } label: {
+                    Label("Detect Patterns", systemImage: "arrow.clockwise")
+                }
+                
+                Divider()
+                
+                Button {
+                    showingDependencyGraph = true
+                } label: {
+                    Label("Task Dependencies", systemImage: "network")
+                }
+                
+                Button {
+                    showingInsightsDashboard = true
+                } label: {
+                    Label("Productivity Insights", systemImage: "chart.line.uptrend.xyaxis")
+                }
+            } label: {
+                Label("AI Tools", systemImage: "sparkles")
             }
-        } message: { area in
-            Text("Are you sure you want to delete \"\(area.name)\"? This will also delete all projects and tasks within this area.")
         }
-        .alert("Delete Project", isPresented: $showingDeleteProjectAlert, presenting: projectToDelete) { project in
-            Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) {
-                deleteProject(project)
+    }
+    
+    @ToolbarContentBuilder
+    private var helpAndEditButtons: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarTrailing) {
+            HStack(spacing: 8) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        showExplainers.toggle()
+                    }
+                } label: {
+                    Image(systemName: showExplainers ? "questionmark.circle.fill" : "questionmark.circle")
+                        .font(.body)
+                        .foregroundColor(showExplainers ? .accentColor : .primary)
+                }
+                
+                EditButton()
             }
-        } message: { project in
-            Text("Are you sure you want to delete \"\(project.name)\"? This will also delete all tasks within this project.")
-        }
-        .sheet(isPresented: $showingOptimization) {
-            TaskOptimizationView(viewModel: viewModel)
-        }
-        .sheet(isPresented: $showingWorkloadBalance) {
-            WorkloadBalanceView(viewModel: viewModel)
-        }
-        .sheet(isPresented: $showingRecurrenceSuggestions) {
-            RecurrenceSuggestionView(viewModel: viewModel)
-        }
-        .sheet(isPresented: $showingDependencyGraph) {
-            DependencyGraphView(viewModel: viewModel)
-        }
-        .sheet(isPresented: $showingInsightsDashboard) {
-            TaskInsightsDashboardView(viewModel: viewModel)
         }
     }
     
@@ -145,7 +146,8 @@ struct TasksView: View {
                     TaskSectionRow(
                         section: section,
                         count: taskCount(for: section),
-                        viewModel: viewModel
+                        viewModel: viewModel,
+                        showExplainers: showExplainers
                     )
                 }
             }
@@ -156,7 +158,8 @@ struct TasksView: View {
                 TaskSectionRow(
                     section: .logbook,
                     count: taskCount(for: .logbook),
-                    viewModel: viewModel
+                    viewModel: viewModel,
+                    showExplainers: showExplainers
                 )
             }
         }
@@ -178,7 +181,19 @@ struct TasksView: View {
     private var areasAndProjectsSection: some View {
         if editMode == .active {
             // Edit mode: simple list for areas
-            Section("Areas & Projects") {
+            Section(header: VStack(alignment: .leading, spacing: 2) {
+                Text("Areas & Projects")
+                    .font(.headline)
+                if showExplainers {
+                    Text("Organize your tasks by context and goals")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .transition(.asymmetric(
+                            insertion: .push(from: .top).combined(with: .opacity),
+                            removal: .push(from: .bottom).combined(with: .opacity)
+                        ))
+                }
+            }) {
                 ForEach(viewModel.areas) { area in
                     HStack {
                         Image(systemName: area.icon)
@@ -217,7 +232,19 @@ struct TasksView: View {
             // Orphan projects in separate section
             let orphanProjects = viewModel.projects.filter { $0.areaId == nil }
             if !orphanProjects.isEmpty {
-                Section("Projects") {
+                Section(header: VStack(alignment: .leading, spacing: 2) {
+                    Text("Projects")
+                        .font(.headline)
+                    if showExplainers {
+                        Text("Projects not assigned to any area")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .transition(.asymmetric(
+                                insertion: .push(from: .top).combined(with: .opacity),
+                                removal: .push(from: .bottom).combined(with: .opacity)
+                            ))
+                    }
+                }) {
                     ForEach(orphanProjects) { project in
                         HStack(spacing: 12) {
                             let allProjectTasks = viewModel.tasks.filter { $0.projectId == project.id }
@@ -341,6 +368,7 @@ struct TasksView: View {
             projectToDelete: $projectToDelete,
             showingDeleteProjectAlert: $showingDeleteProjectAlert,
             editMode: $editMode,
+            showExplainers: showExplainers,
             onNavigateToProject: { project in
                 navigationPath.append(TaskFilter.project(project))
             }
@@ -480,5 +508,76 @@ struct TasksView: View {
     
     private func deleteProject(_ project: Project) {
         viewModel.deleteProject(project)
+    }
+}
+
+// MARK: - View Modifiers
+
+struct TasksViewSheets: ViewModifier {
+    @Binding var showingAddTask: Bool
+    @Binding var showingOptimization: Bool
+    @Binding var showingWorkloadBalance: Bool
+    @Binding var showingRecurrenceSuggestions: Bool
+    @Binding var showingDependencyGraph: Bool
+    @Binding var showingInsightsDashboard: Bool
+    @Binding var areaToEdit: Area?
+    @Binding var projectToEdit: Project?
+    let viewModel: TasksViewModel
+    
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $showingAddTask) {
+                AddTaskView(viewModel: viewModel)
+            }
+            .sheet(item: $areaToEdit) { area in
+                EditAreaView(viewModel: viewModel, area: area)
+            }
+            .sheet(item: $projectToEdit) { project in
+                EditProjectView(viewModel: viewModel, project: project)
+            }
+            .sheet(isPresented: $showingOptimization) {
+                TaskOptimizationView(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showingWorkloadBalance) {
+                WorkloadBalanceView(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showingRecurrenceSuggestions) {
+                RecurrenceSuggestionView(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showingDependencyGraph) {
+                DependencyGraphView(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showingInsightsDashboard) {
+                TaskInsightsDashboardView(viewModel: viewModel)
+            }
+    }
+}
+
+struct TasksViewAlerts: ViewModifier {
+    @Binding var showingDeleteAreaAlert: Bool
+    @Binding var showingDeleteProjectAlert: Bool
+    @Binding var areaToDelete: Area?
+    @Binding var projectToDelete: Project?
+    let deleteArea: (Area) -> Void
+    let deleteProject: (Project) -> Void
+    
+    func body(content: Content) -> some View {
+        content
+            .alert("Delete Area", isPresented: $showingDeleteAreaAlert, presenting: areaToDelete) { area in
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    deleteArea(area)
+                }
+            } message: { area in
+                Text("Are you sure you want to delete \"\(area.name)\"? This will also delete all projects and tasks within this area.")
+            }
+            .alert("Delete Project", isPresented: $showingDeleteProjectAlert, presenting: projectToDelete) { project in
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    deleteProject(project)
+                }
+            } message: { project in
+                Text("Are you sure you want to delete \"\(project.name)\"? This will also delete all tasks within this project.")
+            }
     }
 }

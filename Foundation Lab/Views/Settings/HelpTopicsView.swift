@@ -331,6 +331,19 @@ let helpContent: [String: (overview: String, sections: [HelpSection])] = [
         overview: "Organize your tasks with a hierarchical structure",
         sections: [
             HelpSection(
+                title: "Task Sections Explained",
+                content: [
+                    HelpItem(type: .text, content: "Each section in the Tasks view helps you organize tasks by timing and context:"),
+                    HelpItem(type: .text, content: "• Inbox: Unscheduled tasks without a project"),
+                    HelpItem(type: .text, content: "• Today: Tasks scheduled for today"),
+                    HelpItem(type: .text, content: "• Upcoming: Tasks scheduled for the future"),
+                    HelpItem(type: .text, content: "• Anytime: Tasks assigned to projects"),
+                    HelpItem(type: .text, content: "• Someday: Tasks without dates for future consideration"),
+                    HelpItem(type: .text, content: "• Logbook: Completed tasks archive"),
+                    HelpItem(type: .tip, content: "Tap the ? icon in the toolbar to show/hide section descriptions")
+                ]
+            ),
+            HelpSection(
                 title: "What are Areas?",
                 content: [
                     HelpItem(type: .text, content: "Areas are high-level categories that group related projects together. Think of them as different aspects of your life or work."),

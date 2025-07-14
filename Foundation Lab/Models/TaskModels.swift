@@ -304,6 +304,23 @@ enum TaskSection: String, CaseIterable {
         case .logbook: return .brown
         }
     }
+    
+    var description: String {
+        switch self {
+        case .inbox:
+            return "Unscheduled tasks without a project"
+        case .today:
+            return "Tasks scheduled for today"
+        case .upcoming:
+            return "Tasks scheduled for the future"
+        case .anytime:
+            return "Tasks assigned to projects"
+        case .someday:
+            return "Tasks without dates for future consideration"
+        case .logbook:
+            return "Completed tasks archive"
+        }
+    }
 }
 
 // MARK: - Task Filter

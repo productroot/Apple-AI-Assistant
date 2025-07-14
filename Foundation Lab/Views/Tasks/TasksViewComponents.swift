@@ -5,6 +5,7 @@ struct TaskSectionRow: View {
     let section: TaskSection
     let count: Int
     let viewModel: TasksViewModel
+    let showExplainers: Bool
     
     var body: some View {
         HStack {
@@ -13,8 +14,20 @@ struct TaskSectionRow: View {
                 .font(.title3)
                 .frame(width: 28)
             
-            Text(section.rawValue)
-                .font(.body)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(section.rawValue)
+                    .font(.body)
+                
+                if showExplainers {
+                    Text(section.description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .transition(.asymmetric(
+                            insertion: .push(from: .top).combined(with: .opacity),
+                            removal: .push(from: .bottom).combined(with: .opacity)
+                        ))
+                }
+            }
             
             Spacer()
             
@@ -28,7 +41,8 @@ struct TaskSectionRow: View {
                     .cornerRadius(6)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, showExplainers ? 6 : 4)
+        .animation(.easeInOut(duration: 0.3), value: showExplainers)
     }
 }
 

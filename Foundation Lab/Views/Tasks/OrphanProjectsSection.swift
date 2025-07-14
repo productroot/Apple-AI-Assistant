@@ -6,6 +6,7 @@ struct OrphanProjectsSection: View {
     @Binding var projectToDelete: Project?
     @Binding var showingDeleteProjectAlert: Bool
     @Binding var editMode: EditMode
+    let showExplainers: Bool
     var onNavigateToProject: ((Project) -> Void)?
     
     var orphanProjects: [Project] {
@@ -14,7 +15,19 @@ struct OrphanProjectsSection: View {
     
     var body: some View {
         if !orphanProjects.isEmpty {
-            Section("Projects") {
+            Section(header: VStack(alignment: .leading, spacing: 2) {
+                Text("Projects")
+                    .font(.headline)
+                if showExplainers {
+                    Text("Projects not assigned to any area")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .transition(.asymmetric(
+                            insertion: .push(from: .top).combined(with: .opacity),
+                            removal: .push(from: .bottom).combined(with: .opacity)
+                        ))
+                }
+            }) {
                 ForEach(orphanProjects) { project in
                     NavigationLink(value: TaskFilter.project(project)) {
                         HStack(spacing: 12) {
