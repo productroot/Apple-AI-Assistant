@@ -74,20 +74,25 @@ struct ChatInstructionsView: View {
                             .foregroundColor(.secondary)
                             .padding(.horizontal, Spacing.medium)
                         
-                        TextEditor(text: $customInstructions)
-                            .font(.body)
-                            .scrollContentBackground(.hidden)
-                            .padding(Spacing.medium)
-                            .frame(maxWidth: .infinity, minHeight: 80, maxHeight: 120, alignment: .leading)
-                            .background(Color.gray.opacity(0.1))
-                            .cornerRadius(12)
-                            .padding(.horizontal, Spacing.medium)
-                            .placeholder(when: customInstructions.isEmpty) {
+                        ZStack(alignment: .topLeading) {
+                            if customInstructions.isEmpty {
                                 Text("Add any additional instructions for the AI...")
-                                    .foregroundColor(.secondary)
-                                    .padding(.horizontal, Spacing.medium)
-                                    .padding(.top, Spacing.medium + 8)
+                                    .font(.body)
+                                    .foregroundColor(.secondary.opacity(0.6))
+                                    .padding(Spacing.medium)
+                                    .allowsHitTesting(false)
                             }
+                            
+                            TextEditor(text: $customInstructions)
+                                .font(.body)
+                                .scrollContentBackground(.hidden)
+                                .padding(Spacing.small)
+                                .foregroundColor(.primary)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 80, maxHeight: 120, alignment: .leading)
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(12)
+                        .padding(.horizontal, Spacing.medium)
                     }
                     
                     HStack {
@@ -126,18 +131,5 @@ struct ChatInstructionsView: View {
         .cornerRadius(12)
         .padding(.horizontal, Spacing.medium)
         .padding(.vertical, Spacing.small)
-    }
-}
-
-extension View {
-    func placeholder<Content: View>(
-        when shouldShow: Bool,
-        alignment: Alignment = .leading,
-        @ViewBuilder placeholder: () -> Content) -> some View {
-        
-        ZStack(alignment: alignment) {
-            placeholder().opacity(shouldShow ? 1 : 0)
-            self
-        }
     }
 }
