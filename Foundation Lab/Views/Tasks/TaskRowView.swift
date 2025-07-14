@@ -250,7 +250,8 @@ struct TaskRowView: View {
             .buttonStyle(.plain)
             
             // Task content
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 8) {
+                // Title
                 if !task.mentionedContactIds.isEmpty && !loadedContacts.isEmpty {
                     RichTextView(text: task.title, mentionedContacts: loadedContacts)
                         .font(.body)
@@ -263,65 +264,86 @@ struct TaskRowView: View {
                         .foregroundStyle(task.isCompleted ? .secondary : .primary)
                 }
                 
-                HStack(spacing: 8) {
-                    if task.priority != .none {
-                        Image(systemName: task.priority.icon)
-                            .font(.caption2)
-                            .foregroundStyle(task.priority.color)
-                    }
-                    
-                    if let project = getProjectForTask(task) {
-                        Label {
-                            Text(project.name)
-                        } icon: {
-                            Circle()
-                                .fill(project.displayColor)
-                                .frame(width: 6, height: 6)
-                        }
+                // Notes (if present)
+                if !task.notes.isEmpty {
+                    Text(task.notes)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    }
-                    
-                    if let scheduledDate = task.scheduledDate {
-                        Label {
-                            Text(scheduledDate, style: .date)
-                        } icon: {
-                            Image(systemName: "calendar")
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
-                    
-                    if task.recurrenceRule != nil {
-                        Label {
-                            Text(task.recurrenceRule?.displayName ?? "Repeating")
-                        } icon: {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.purple)
-                    }
-                    
-                    if let duration = task.estimatedDuration {
-                        Label {
-                            Text(formatDuration(duration))
-                        } icon: {
-                            Image(systemName: "clock")
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                    }
-                    
-                    if !task.tags.isEmpty {
-                        HStack(spacing: 4) {
-                            ForEach(Array(task.tags), id: \.self) { tag in
-                                Text("#\(tag)")
+                        .lineLimit(2)
+                }
+                
+                // Metadata in same style as inline edit
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        // Priority
+                        if task.priority != .none {
+                            HStack(spacing: 6) {
+                                Image(systemName: task.priority.icon)
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(task.priority.color)
+                                Text(task.priority.name)
                                     .font(.caption)
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(task.priority.color)
                             }
                         }
+                        
+                        // Date & Reminder
+                        if task.scheduledDate != nil {
+                            Divider()
+                                .frame(height: 20)
+                            
+                            HStack(spacing: 6) {
+                                Image(systemName: task.reminderTime != nil ? "bell.badge" : "calendar")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(.blue)
+                                if let date = task.scheduledDate {
+                                    if let time = task.reminderTime {
+                                        Text(time, format: .dateTime.month(.abbreviated).day().hour().minute())
+                                            .font(.caption)
+                                            .foregroundStyle(.primary)
+                                    } else {
+                                        Text(date, format: .dateTime.month(.abbreviated).day())
+                                            .font(.caption)
+                                            .foregroundStyle(.primary)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Recurrence
+                        if let recurrenceRule = task.recurrenceRule {
+                            Divider()
+                                .frame(height: 20)
+                            
+                            HStack(spacing: 6) {
+                                Image(systemName: recurrenceRule.icon)
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(.purple)
+                                Text(recurrenceRule.displayName)
+                                    .font(.caption)
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+                        
+                        // Duration
+                        if let duration = task.estimatedDuration {
+                            Divider()
+                                .frame(height: 20)
+                            
+                            HStack(spacing: 6) {
+                                Image(systemName: "clock")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(.orange)
+                                Text(formatDuration(duration))
+                                    .font(.caption)
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+                        
                     }
+                    .padding(.horizontal, 4)
                 }
+                .frame(height: 24)
             }
             
             Spacer()
@@ -701,10 +723,6 @@ struct TaskRowView: View {
         }
     }
     
-    private func getProjectForTask(_ task: TodoTask) -> Project? {
-        guard let projectId = task.projectId else { return nil }
-        return viewModel.projects.first { $0.id == projectId }
-    }
     
     private func addChecklistItem() {
         guard !newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
