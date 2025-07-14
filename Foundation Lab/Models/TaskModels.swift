@@ -348,4 +348,10 @@ extension Area: Transferable {
     }
 }
 
+extension ChecklistItem: Transferable {
+    static var transferRepresentation: some TransferRepresentation {
+        ProxyRepresentation(exporting: { $0.id.uuidString })
+    }
+}
+
 
