@@ -42,6 +42,7 @@ struct TaskRowView: View {
     @State private var loadedContacts: [CNContact] = []
     @State private var editingMentionedContacts: [CNContact] = []
     @State private var editedReminderTime: Date?
+    @State private var draggedChecklistItem: ChecklistItem?
     // Reminder state is now managed by the integrated picker
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
@@ -182,6 +183,15 @@ struct TaskRowView: View {
             Button("OK") {
                 showGenerationError = false
             }
+            #if os(iOS)
+            if generationError?.contains("not available") == true {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            }
+            #endif
         } message: {
             Text(generationError ?? "Failed to generate checklist")
         }
@@ -587,21 +597,46 @@ struct TaskRowView: View {
     @ViewBuilder
     private var checklistItemsView: some View {
         VStack(spacing: 2) {
-            ForEach($task.checklistItems) { $item in
+            ForEach(task.checklistItems.indices, id: \.self) { index in
+                let item = task.checklistItems[index]
                 InlineChecklistItemRow(
-                    item: $item,
+                    item: $task.checklistItems[index],
                     onDelete: {
                         withAnimation {
-                            task.checklistItems.removeAll { $0.id == item.id }
+                            if index < task.checklistItems.count {
+                                task.checklistItems.remove(at: index)
+                                
+                                // Save the updated task after deletion
+                                var updatedTask = task
+                                updatedTask.checklistItems = task.checklistItems
+                                viewModel.updateTask(updatedTask)
+                                print("💾 Deleted checklist item and saved task")
+                            }
                         }
-                    }
+                    },
+                    onChange: {
+                        // Save the updated task after any change
+                        var updatedTask = task
+                        updatedTask.checklistItems = task.checklistItems
+                        viewModel.updateTask(updatedTask)
+                        print("💾 Updated checklist item and saved task")
+                    },
+                    draggedItem: $draggedChecklistItem
                 )
-                .draggable(item) {
-                    DraggableChecklistPreview(item: item)
-                }
-                .dropDestination(for: ChecklistItem.self) { items, _ in
-                    handleChecklistDrop(items: items, targetItem: item)
-                }
+                .background(draggedChecklistItem?.id == item.id ? Color.blue.opacity(0.1) : Color.clear)
+                .onDrop(of: [.text], delegate: ChecklistDropDelegate(
+                    item: item,
+                    items: $task.checklistItems,
+                    draggedItem: $draggedChecklistItem,
+                    currentIndex: index,
+                    onReorder: {
+                        // Save the updated task after reordering
+                        var updatedTask = task
+                        updatedTask.checklistItems = task.checklistItems
+                        viewModel.updateTask(updatedTask)
+                        print("💾 Reordered checklist items and saved task")
+                    }
+                ))
             }
         }
     }
@@ -648,6 +683,7 @@ struct TaskRowView: View {
             
             // AI Generate Checklist Button
             Button {
+                print("🔘 Generate Checklist button tapped")
                 generateChecklist()
             } label: {
                 HStack(spacing: 6) {
@@ -666,50 +702,46 @@ struct TaskRowView: View {
                 .background(Color.blue)
                 .cornerRadius(8)
             }
+            .buttonStyle(.plain)
             .disabled(isGeneratingChecklist)
         }
     }
     
     private var expandedEditView: some View {
-        ZStack {
-            // Background tap handler
-            Color.clear
-                .contentShape(Rectangle())
+        VStack(spacing: 0) {
+            // Main editing area
+            VStack(spacing: 12) {
+                // Title Field
+                titleEditSection
+                
+                // Notes Field
+                notesEditSection
+                
+                // Metadata Controls
+                metadataControlsSection
+                
+                // Mentioned Contacts
+                mentionedContactsSection
+                
+                // Checklist
+                checklistSection
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemGray6))
+                .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 2)
                 .onTapGesture {
+                    // Only save if tapping the background, not on interactive elements
                     if !isTitleFocused && !isNotesFocused {
                         saveTask()
                     }
                 }
-            
-            VStack(spacing: 0) {
-                // Main editing area
-                VStack(spacing: 12) {
-                    // Title Field
-                    titleEditSection
-                    
-                    // Notes Field
-                    notesEditSection
-                    
-                    // Metadata Controls
-                    metadataControlsSection
-                    
-                    // Mentioned Contacts
-                    mentionedContactsSection
-                    
-                    // Checklist
-                    checklistSection
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 16)
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
-                    .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 2)
-            )
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-        }
+        )
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
     
     private func saveTask() {
@@ -764,22 +796,39 @@ struct TaskRowView: View {
         guard !newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         task.checklistItems.append(ChecklistItem(title: newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines)))
         newChecklistItem = ""
+        
+        // Save the updated task to persist the new checklist item
+        var updatedTask = task
+        updatedTask.checklistItems = task.checklistItems
+        viewModel.updateTask(updatedTask)
+        print("💾 Added and saved new checklist item")
     }
     
     private func generateChecklist() {
         print("🎯 Starting AI checklist generation for task: \(task.title)")
+        print("   Task ID: \(task.id)")
+        print("   Current checklist items: \(task.checklistItems.count)")
+        
         isGeneratingChecklist = true
         generationError = nil
         
         Task {
             do {
+                print("📡 Calling viewModel.generateTaskChecklist...")
                 let generatedItems = try await viewModel.generateTaskChecklist(for: task)
+                print("📥 Received \(generatedItems.count) generated items")
                 
                 await MainActor.run {
                     // Append generated items to existing checklist
                     task.checklistItems.append(contentsOf: generatedItems)
                     isGeneratingChecklist = false
                     print("✅ Successfully added \(generatedItems.count) AI-generated checklist items")
+                    
+                    // Save the updated task to persist the new checklist items
+                    var updatedTask = task
+                    updatedTask.checklistItems = task.checklistItems
+                    viewModel.updateTask(updatedTask)
+                    print("💾 Saved updated task with new checklist items")
                 }
             } catch {
                 await MainActor.run {
@@ -787,6 +836,8 @@ struct TaskRowView: View {
                     showGenerationError = true
                     isGeneratingChecklist = false
                     print("❌ Failed to generate checklist: \(error)")
+                    print("   Error type: \(type(of: error))")
+                    print("   Error details: \(error)")
                 }
             }
         }
@@ -798,22 +849,6 @@ struct TaskRowView: View {
         } else {
             return "Duration"
         }
-    }
-    
-    private func handleChecklistDrop(items: [ChecklistItem], targetItem: ChecklistItem) -> Bool {
-        guard let droppedItem = items.first,
-              let fromIndex = task.checklistItems.firstIndex(where: { $0.id == droppedItem.id }),
-              let toIndex = task.checklistItems.firstIndex(where: { $0.id == targetItem.id }) else {
-            return false
-        }
-        
-        withAnimation {
-            task.checklistItems.move(
-                fromOffsets: IndexSet(integer: fromIndex),
-                toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex
-            )
-        }
-        return true
     }
     
     private func formatDuration(_ duration: TimeInterval) -> String {
@@ -902,70 +937,114 @@ struct TaskRowView: View {
 struct InlineChecklistItemRow: View {
     @Binding var item: ChecklistItem
     let onDelete: () -> Void
+    let onChange: () -> Void
+    @Binding var draggedItem: ChecklistItem?
     @State private var isEditing = false
     @State private var showDeleteConfirmation = false
+    @State private var deleteOffset: CGFloat = 0
     @FocusState private var isFocused: Bool
     
     var body: some View {
-        HStack(spacing: 8) {
-            // Completion toggle
-            Button {
-                item.isCompleted.toggle()
-            } label: {
-                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.caption)
-                    .foregroundStyle(item.isCompleted ? .green : .secondary)
+        ZStack(alignment: .trailing) {
+            // Delete button background
+            HStack {
+                Spacer()
+                Button {
+                    showDeleteConfirmation = true
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.caption)
+                        .foregroundStyle(.white)
+                        .frame(width: 60)
+                }
+                .frame(maxHeight: .infinity)
+                .background(Color.red)
             }
-            .buttonStyle(.plain)
+            .opacity(deleteOffset < -60 ? 1 : 0)
             
-            // Item title
-            if isEditing {
-                TextField("Item", text: $item.title)
-                    .font(.caption)
-                    .textFieldStyle(.plain)
-                    .focused($isFocused)
-                    .onSubmit {
-                        isEditing = false
-                    }
-                    .onChange(of: isFocused) { _, newValue in
-                        if !newValue {
+            // Main content
+            HStack(spacing: 8) {
+                // Completion toggle
+                Button {
+                    item.isCompleted.toggle()
+                    onChange()
+                } label: {
+                    Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                        .font(.caption)
+                        .foregroundStyle(item.isCompleted ? .green : .secondary)
+                }
+                .buttonStyle(.plain)
+                
+                // Item title
+                if isEditing {
+                    TextField("Item", text: $item.title)
+                        .font(.caption)
+                        .textFieldStyle(.plain)
+                        .focused($isFocused)
+                        .onSubmit {
                             isEditing = false
+                            onChange()
+                        }
+                        .onChange(of: isFocused) { _, newValue in
+                            if !newValue {
+                                isEditing = false
+                                onChange()
+                            }
+                        }
+                } else {
+                    Text(item.title)
+                        .font(.caption)
+                        .strikethrough(item.isCompleted)
+                        .foregroundStyle(item.isCompleted ? .secondary : .primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            isEditing = true
+                            isFocused = true
+                        }
+                }
+                
+                Spacer()
+                
+                // Drag handle on the right
+                Image(systemName: "line.3.horizontal")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 20)
+                    .onDrag {
+                        draggedItem = item
+                        return NSItemProvider(object: item.id.uuidString as NSString)
+                    }
+            }
+            .padding(.vertical, 4)
+            .padding(.horizontal, 4)
+            .background(Color(.systemGray6).opacity(0.5))
+            .cornerRadius(6)
+            .offset(x: deleteOffset)
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        if value.translation.width < 0 {
+                            deleteOffset = max(value.translation.width, -80)
                         }
                     }
-            } else {
-                Text(item.title)
-                    .font(.caption)
-                    .strikethrough(item.isCompleted)
-                    .foregroundStyle(item.isCompleted ? .secondary : .primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        isEditing = true
-                        isFocused = true
+                    .onEnded { value in
+                        withAnimation(.spring()) {
+                            if value.translation.width < -60 {
+                                deleteOffset = -80
+                            } else {
+                                deleteOffset = 0
+                            }
+                        }
                     }
-            }
-            
-            Spacer()
-            
-            // Drag handle on the right
-            Image(systemName: "line.3.horizontal")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .frame(width: 20)
-        }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 4)
-        .background(Color(.systemGray6).opacity(0.5))
-        .cornerRadius(6)
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) {
-                showDeleteConfirmation = true
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
+            )
         }
         .alert("Delete Item?", isPresented: $showDeleteConfirmation) {
-            Button("Cancel", role: .cancel) { }
+            Button("Cancel", role: .cancel) {
+                withAnimation {
+                    deleteOffset = 0
+                }
+            }
             Button("Delete", role: .destructive) {
                 withAnimation {
                     onDelete()
@@ -991,6 +1070,43 @@ struct DraggableChecklistPreview: View {
         .padding(8)
         .background(Color(.systemGray5))
         .cornerRadius(8)
+    }
+}
+
+// MARK: - Checklist Drop Delegate
+struct ChecklistDropDelegate: DropDelegate {
+    let item: ChecklistItem
+    @Binding var items: [ChecklistItem]
+    @Binding var draggedItem: ChecklistItem?
+    let currentIndex: Int
+    let onReorder: () -> Void
+    
+    func performDrop(info: DropInfo) -> Bool {
+        draggedItem = nil
+        onReorder()
+        return true
+    }
+    
+    func dropEntered(info: DropInfo) {
+        guard let draggedItem = draggedItem,
+              draggedItem.id != item.id,
+              let from = items.firstIndex(where: { $0.id == draggedItem.id }),
+              let to = items.firstIndex(where: { $0.id == item.id }) else {
+            return
+        }
+        
+        withAnimation(.spring()) {
+            items.move(fromOffsets: IndexSet(integer: from),
+                      toOffset: to > from ? to + 1 : to)
+        }
+    }
+    
+    func dropExited(info: DropInfo) {
+        // Optional: Add any cleanup here
+    }
+    
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        return DropProposal(operation: .move)
     }
 }
 

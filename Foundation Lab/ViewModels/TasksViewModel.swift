@@ -11,6 +11,18 @@ import Observation
 import FoundationModels
 import EventKit
 
+// MARK: - Errors
+enum TaskError: LocalizedError {
+    case modelUnavailable
+    
+    var errorDescription: String? {
+        switch self {
+        case .modelUnavailable:
+            return "AI features are not available. Please ensure Apple Intelligence is enabled in Settings."
+        }
+    }
+}
+
 @Observable
 final class TasksViewModel {
     // MARK: - Properties
@@ -784,6 +796,14 @@ final class TasksViewModel {
     func estimateTaskDuration(for task: TodoTask) async throws -> TimeInterval {
         print("📊 Estimating duration for task: \(task.title)")
         
+        // Check model availability first
+        let availability = SystemLanguageModel.default.availability
+        guard availability == .available else {
+            print("❌ Language model is not available")
+            print("   Availability: \(availability)")
+            throw TaskError.modelUnavailable
+        }
+        
         // Get project name if available
         let projectName = task.projectId.flatMap { projectId in
             projects.first { $0.id == projectId }?.name
@@ -904,6 +924,14 @@ final class TasksViewModel {
     @MainActor
     func generateTaskChecklist(for task: TodoTask) async throws -> [ChecklistItem] {
         print("🤖 Generating AI checklist for task: \(task.title)")
+        
+        // Check model availability first
+        let availability = SystemLanguageModel.default.availability
+        guard availability == .available else {
+            print("❌ Language model is not available")
+            print("   Availability: \(availability)")
+            throw TaskError.modelUnavailable
+        }
         
         // Get project and area context
         var projectName: String?
