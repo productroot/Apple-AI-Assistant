@@ -43,6 +43,7 @@ struct TaskRowView: View {
     @State private var editingMentionedContacts: [CNContact] = []
     @State private var editedReminderTime: Date?
     @State private var showingChecklistEditor = false
+    @State private var editedTags: String = ""
     // Reminder state is now managed by the integrated picker
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
@@ -76,6 +77,7 @@ struct TaskRowView: View {
         _editedCustomRecurrence = State(initialValue: task.customRecurrence)
         _editedDuration = State(initialValue: task.estimatedDuration)
         _editedReminderTime = State(initialValue: task.reminderTime)
+        _editedTags = State(initialValue: task.tags.joined(separator: ", "))
         // Reminder state is managed by the integrated picker
     }
 
@@ -101,6 +103,8 @@ struct TaskRowView: View {
                     editingMentionedContacts = loadedContacts
                     // Reminder time will be set by the integrated picker
                     editedReminderTime = task.reminderTime
+                    // Reset tags to current task tags
+                    editedTags = task.tags.joined(separator: ", ")
                 }
                 // Don't focus automatically - let user tap to show keyboard
             } else if !isEditing {
@@ -129,6 +133,8 @@ struct TaskRowView: View {
                         onEditingChanged?(true, task)
                         // Reminder time will be set by the integrated picker
                         editedReminderTime = task.reminderTime
+                        // Reset tags to current task tags
+                        editedTags = task.tags.joined(separator: ", ")
                     }
                 } label: {
                     Label("Edit", systemImage: "pencil")
@@ -366,6 +372,22 @@ struct TaskRowView: View {
                                     .foregroundStyle(.primary)
                             }
                         }
+                        
+                        // Tags
+                        if !task.tags.isEmpty {
+                            Divider()
+                                .frame(height: 20)
+                            
+                            HStack(spacing: 6) {
+                                Image(systemName: "tag")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(.indigo)
+                                Text(task.tags.joined(separator: ", "))
+                                    .font(.caption)
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                            }
+                        }
                     }
                     .padding(.horizontal, 4)
                 }
@@ -436,6 +458,23 @@ struct TaskRowView: View {
             isNotesFocused = false
             saveTask()
         }
+    }
+    
+    @ViewBuilder
+    private var tagsEditSection: some View {
+        TextField("Tags (comma separated)", text: $editedTags)
+            .font(.body)
+            .textFieldStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color(.systemGray5))
+            .cornerRadius(8)
+            .textInputAutocapitalization(.never)
+            .onSubmit {
+                isTitleFocused = false
+                isNotesFocused = false
+                saveTask()
+            }
     }
     
     @ViewBuilder
@@ -756,6 +795,9 @@ struct TaskRowView: View {
                 // Notes Field
                 notesEditSection
                 
+                // Tags Field
+                tagsEditSection
+                
                 // Metadata Controls
                 metadataControlsSection
                 
@@ -793,6 +835,13 @@ struct TaskRowView: View {
         updatedTask.customRecurrence = editedCustomRecurrence
         updatedTask.estimatedDuration = editedDuration
         updatedTask.reminderTime = editedReminderTime
+        
+        // Parse tags from comma-separated string
+        let tagArray = editedTags.split(separator: ",").map { String($0.trimmingCharacters(in: .whitespaces)) }.filter { !$0.isEmpty }
+        updatedTask.tags = tagArray
+        print("🏷️ Updated task tags: \(tagArray)")
+        print("   Original tags: \(task.tags)")
+        print("   Edited tags string: '\(editedTags)'")
         
         // Clear custom recurrence if not using custom rule
         if editedRecurrenceRule != .custom {
