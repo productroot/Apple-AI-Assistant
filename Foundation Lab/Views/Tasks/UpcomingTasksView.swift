@@ -259,6 +259,6 @@ struct DayHeaderView: View {
 
 #Preview {
     NavigationStack {
-        UpcomingTasksView(viewModel: TasksViewModel())
+        UpcomingTasksView(viewModel: TasksViewModel.shared)
     }
 } 

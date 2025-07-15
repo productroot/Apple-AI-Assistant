@@ -25,6 +25,9 @@ enum TaskError: LocalizedError {
 
 @Observable
 final class TasksViewModel {
+    // MARK: - Singleton
+    static let shared = TasksViewModel()
+    
     // MARK: - Properties
     var tasks: [TodoTask] = []
     var projects: [Project] = []
@@ -120,10 +123,12 @@ final class TasksViewModel {
     }
     
     // MARK: - Initialization
-    init() {
+    private init() {
+        print("🚀 TasksViewModel initializing...")
         // Always load local data first
         loadLocalData()
         // Don't auto-sync on startup to avoid loops
+        print("✅ TasksViewModel initialization complete")
     }
     
     // MARK: - Task Management
@@ -447,7 +452,14 @@ final class TasksViewModel {
     
     func updateProject(_ project: Project) {
         if let index = projects.firstIndex(where: { $0.id == project.id }) {
+            let oldProject = projects[index]
             projects[index] = project
+            print("📝 Updated project:")
+            print("   ID: \(project.id)")
+            print("   Old name: '\(oldProject.name)'")
+            print("   New name: '\(project.name)'")
+            print("   Color: \(project.color)")
+            print("   Icon: \(project.icon)")
             saveToiCloudIfEnabled()
         }
     }
@@ -614,24 +626,37 @@ final class TasksViewModel {
     }
     
     private func loadLocalData() {
+        print("📖 Loading local data...")
         let decoder = JSONDecoder()
         
         if let tasksData = UserDefaults.standard.data(forKey: "localTasks"),
            let decodedTasks = try? decoder.decode([TodoTask].self, from: tasksData) {
             tasks = decodedTasks
+            print("   ✅ Loaded \(tasks.count) tasks from UserDefaults")
+        } else {
+            print("   ❌ No tasks found in UserDefaults")
         }
         
         if let projectsData = UserDefaults.standard.data(forKey: "localProjects"),
            let decodedProjects = try? decoder.decode([Project].self, from: projectsData) {
             projects = decodedProjects
+            print("   ✅ Loaded \(projects.count) projects from UserDefaults")
+        } else {
+            print("   ❌ No projects found in UserDefaults")
         }
         
         if let areasData = UserDefaults.standard.data(forKey: "localAreas"),
            let decodedAreas = try? decoder.decode([Area].self, from: areasData) {
             areas = decodedAreas
+            print("   ✅ Loaded \(areas.count) areas from UserDefaults")
+        } else {
+            print("   ❌ No areas found in UserDefaults")
         }
         
+        print("   📊 Total loaded: \(tasks.count) tasks, \(projects.count) projects, \(areas.count) areas")
+        
         if tasks.isEmpty && projects.isEmpty && areas.isEmpty {
+            print("   🎯 All data empty, loading sample data...")
             loadSampleData()
         }
     }
@@ -639,23 +664,35 @@ final class TasksViewModel {
     private func saveLocally() {
         let encoder = JSONEncoder()
         
+        print("💾 Starting local save...")
+        print("   Tasks to save: \(tasks.count)")
+        print("   Projects to save: \(projects.count)")
+        print("   Areas to save: \(areas.count)")
+        
         if let tasksData = try? encoder.encode(tasks) {
             UserDefaults.standard.set(tasksData, forKey: "localTasks")
+            print("   ✅ Tasks saved to UserDefaults")
+        } else {
+            print("   ❌ Failed to encode tasks")
         }
         
         do {
             let projectsData = try encoder.encode(projects)
             UserDefaults.standard.set(projectsData, forKey: "localProjects")
-            print("DEBUG: Saved \(projects.count) projects locally")
+            print("   ✅ Saved \(projects.count) projects locally")
         } catch {
-            print("ERROR: Failed to encode projects: \(error)")
+            print("   ❌ Failed to encode projects: \(error)")
         }
         
         if let areasData = try? encoder.encode(areas) {
             UserDefaults.standard.set(areasData, forKey: "localAreas")
+            print("   ✅ Areas saved to UserDefaults")
+        } else {
+            print("   ❌ Failed to encode areas")
         }
         
         UserDefaults.standard.synchronize()
+        print("   ✅ UserDefaults synchronized")
     }
     
     func saveToiCloudIfEnabled() {
@@ -670,11 +707,32 @@ final class TasksViewModel {
     
     func syncWithiCloud() {
         guard cloudService.iCloudEnabled else { return }
-        loadFromiCloud()
+        
+        // Sync should push local data to iCloud, not pull from iCloud
+        print("🔄 Syncing local data to iCloud...")
+        Task {
+            do {
+                try await cloudService.saveTasks(tasks, projects: projects, areas: areas)
+                print("✅ Successfully synced local data to iCloud")
+            } catch {
+                print("❌ Failed to sync to iCloud: \(error)")
+            }
+        }
     }
     
     func exportToiCloud() async throws {
+        print("📤 Starting export to iCloud...")
+        print("   Local data before export:")
+        print("   - Tasks: \(tasks.count)")
+        print("   - Projects: \(projects.count)")
+        print("   - Areas: \(areas.count)")
+        
+        if let firstProject = projects.first {
+            print("   - Sample project: '\(firstProject.name)' (ID: \(firstProject.id))")
+        }
+        
         try await cloudService.saveTasks(tasks, projects: projects, areas: areas)
+        print("✅ Export to iCloud completed successfully")
     }
     
     func importFromiCloud() async throws {
@@ -682,31 +740,54 @@ final class TasksViewModel {
             throw iCloudError.syncInProgress
         }
         
+        print("📥 Starting import from iCloud...")
+        print("   Local data before import:")
+        print("   - Tasks: \(tasks.count)")
+        print("   - Projects: \(projects.count)")
+        print("   - Areas: \(areas.count)")
+        
         isLoadingFromiCloud = true
         defer { isLoadingFromiCloud = false }
         
         do {
-            let (fetchedTasks, fetchedProjects, fetchedAreas) = try await cloudService.fetchTasks()
+            let (fetchedTasks, fetchedProjects, fetchedAreas) = try await cloudService.fetchTasks(forceFullFetch: true)
+            
+            print("   Data fetched from iCloud:")
+            print("   - Tasks: \(fetchedTasks.count)")
+            print("   - Projects: \(fetchedProjects.count)")
+            print("   - Areas: \(fetchedAreas.count)")
+            
+            if let firstProject = fetchedProjects.first {
+                print("   - Sample project: '\(firstProject.name)' (ID: \(firstProject.id))")
+            }
             
             await MainActor.run {
                 self.isUpdatingFromSync = true
+                
+                print("🧹 Clearing existing data...")
+                print("   Before clear: \(self.tasks.count) tasks, \(self.projects.count) projects, \(self.areas.count) areas")
                 
                 // Clear existing data
                 self.tasks.removeAll()
                 self.projects.removeAll()
                 self.areas.removeAll()
                 
+                print("   After clear: \(self.tasks.count) tasks, \(self.projects.count) projects, \(self.areas.count) areas")
+                
                 // Import new data
                 self.areas = fetchedAreas
                 self.projects = fetchedProjects
                 self.tasks = fetchedTasks
                 
+                print("   After import: \(self.tasks.count) tasks, \(self.projects.count) projects, \(self.areas.count) areas")
+                
                 self.isUpdatingFromSync = false
                 
                 // Save to local storage
+                print("💾 Saving imported data to local storage...")
                 self.saveLocally()
                 
-                print("Import completed: \(tasks.count) tasks, \(projects.count) projects, \(areas.count) areas")
+                print("✅ Import completed: \(tasks.count) tasks, \(projects.count) projects, \(areas.count) areas")
             }
         } catch {
             await MainActor.run {

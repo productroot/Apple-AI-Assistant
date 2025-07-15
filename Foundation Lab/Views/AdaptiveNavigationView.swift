@@ -10,13 +10,13 @@ import FoundationModels
 
 struct AdaptiveNavigationView: View {
     @State private var contentViewModel = ContentViewModel()
-    @State private var tasksViewModel = TasksViewModel()
+    @State private var tasksViewModel = TasksViewModel.shared
     @State private var chatViewModel: ChatViewModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private let navigationCoordinator = NavigationCoordinator.shared
     
     init() {
-        let tasks = TasksViewModel()
+        let tasks = TasksViewModel.shared
         _tasksViewModel = State(initialValue: tasks)
         _chatViewModel = State(initialValue: ChatViewModel(tasksViewModel: tasks))
     }

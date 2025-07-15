@@ -310,7 +310,7 @@ struct EditProjectView: View {
 
 #Preview {
     EditProjectView(
-        viewModel: TasksViewModel(),
+        viewModel: TasksViewModel.shared,
         project: Project(name: "Sample Project", color: "blue", icon: "folder")
     )
 }

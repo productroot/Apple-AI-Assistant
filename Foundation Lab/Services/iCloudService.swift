@@ -74,11 +74,17 @@ final class iCloudService {
     private func createCustomZoneIfNeeded() async throws {
         let customZone = CKRecordZone(zoneID: customZoneID)
         do {
-            _ = try await privateDatabase.save(customZone)
-            print("Custom zone created or already exists")
-        } catch let error as CKError where error.code == .zoneNotFound || error.code == .serverRecordChanged {
-            // Zone already exists, which is fine
-            print("Zone already exists")
+            let savedZone = try await privateDatabase.save(customZone)
+            print("✅ Custom zone created successfully: \(savedZone.zoneID.zoneName)")
+        } catch let error as CKError {
+            if error.code == .zoneNotFound || error.code == .serverRecordChanged {
+                print("ℹ️ Zone already exists: \(customZoneID.zoneName)")
+            } else {
+                print("❌ Failed to create zone: \(error.localizedDescription)")
+                print("   Error code: \(error.code)")
+                print("   Error info: \(error.userInfo)")
+                throw error
+            }
         }
     }
     
@@ -108,24 +114,44 @@ final class iCloudService {
             }
         }
         
+        print("💾 Preparing data for iCloud export:")
+        print("  - Areas: \(areas.count)")
+        print("  - Projects: \(projects.count)")
+        print("  - Tasks: \(tasks.count)")
+        
+        // First, fetch existing records to determine which ones to update vs insert
+        let existingRecords = try await fetchExistingRecords()
         var records: [CKRecord] = []
         
         // Save AI Learning Data
         let aiLearningData = AILearningDataManager.shared.collectLearningData()
         let aiRecordID = CKRecord.ID(recordName: "AILearningData", zoneID: customZoneID)
-        let aiRecord = CKRecord(recordType: "AILearning", recordID: aiRecordID)
         
-        if let encodedData = try? JSONEncoder().encode(aiLearningData) {
-            aiRecord["data"] = encodedData
-            aiRecord["lastUpdated"] = aiLearningData.lastUpdated
-            aiRecord["version"] = aiLearningData.version
-            records.append(aiRecord)
-            print("📊 Prepared AI learning data for iCloud sync")
+        if let existingAIRecord = existingRecords[aiRecordID.recordName] {
+            // Update existing record
+            let aiRecord = existingAIRecord
+            if let encodedData = try? JSONEncoder().encode(aiLearningData) {
+                aiRecord["data"] = encodedData
+                aiRecord["lastUpdated"] = aiLearningData.lastUpdated
+                aiRecord["version"] = aiLearningData.version
+                records.append(aiRecord)
+                print("📊 Updated existing AI learning data for iCloud sync")
+            }
+        } else {
+            // Create new record
+            let aiRecord = CKRecord(recordType: "AILearning", recordID: aiRecordID)
+            if let encodedData = try? JSONEncoder().encode(aiLearningData) {
+                aiRecord["data"] = encodedData
+                aiRecord["lastUpdated"] = aiLearningData.lastUpdated
+                aiRecord["version"] = aiLearningData.version
+                records.append(aiRecord)
+                print("📊 Created new AI learning data for iCloud sync")
+            }
         }
         
         for area in areas {
             let recordID = CKRecord.ID(recordName: area.id.uuidString, zoneID: customZoneID)
-            let record = CKRecord(recordType: "Area", recordID: recordID)
+            let record = existingRecords[recordID.recordName] ?? CKRecord(recordType: "Area", recordID: recordID)
             record["name"] = area.name
             record["icon"] = area.icon
             record["color"] = area.color
@@ -136,7 +162,7 @@ final class iCloudService {
         
         for project in projects {
             let recordID = CKRecord.ID(recordName: project.id.uuidString, zoneID: customZoneID)
-            let record = CKRecord(recordType: "Project", recordID: recordID)
+            let record = existingRecords[recordID.recordName] ?? CKRecord(recordType: "Project", recordID: recordID)
             record["name"] = project.name
             record["notes"] = project.notes
             record["color"] = project.color
@@ -146,16 +172,64 @@ final class iCloudService {
             record["createdAt"] = project.createdAt
             record["modifiedAt"] = Date()
             records.append(record)
+            print("🗂️ Prepared project for iCloud: '\(project.name)' (ID: \(project.id)) - \(existingRecords[recordID.recordName] != nil ? "UPDATE" : "INSERT")")
         }
         
         for task in tasks {
-            let record = taskToRecord(task)
+            let recordID = CKRecord.ID(recordName: task.id.uuidString, zoneID: customZoneID)
+            let record = existingRecords[recordID.recordName] ?? CKRecord(recordType: recordType, recordID: recordID)
+            
+            // Update all task fields
+            record["title"] = task.title
+            record["notes"] = task.notes
+            record["isCompleted"] = task.isCompleted ? 1 : 0
+            record["completionDate"] = task.completionDate
+            record["projectID"] = task.projectId?.uuidString
+            record["tags"] = task.tags
+            record["dueDate"] = task.dueDate
+            record["scheduledDate"] = task.scheduledDate
+            record["priority"] = task.priority.rawValue
+            record["estimatedDuration"] = task.estimatedDuration
+            record["createdAt"] = task.createdAt
+            record["modifiedAt"] = Date()
+            record["recurrenceRule"] = task.recurrenceRule?.rawValue
+            record["parentTaskId"] = task.parentTaskId?.uuidString
+            record["startedAt"] = task.startedAt
+            
+            if let customRecurrence = task.customRecurrence,
+               let customData = try? JSONEncoder().encode(customRecurrence) {
+                record["customRecurrence"] = customData
+            }
+            
+            if !task.checklistItems.isEmpty {
+                let checklistData = try? JSONEncoder().encode(task.checklistItems)
+                record["checklistItems"] = checklistData
+            }
+            
             records.append(record)
         }
         
         let chunkedRecords = records.chunked(into: 400)
         for chunk in chunkedRecords {
-            _ = try await privateDatabase.modifyRecords(saving: chunk, deleting: [])
+            do {
+                let result = try await privateDatabase.modifyRecords(saving: chunk, deleting: [])
+                print("✅ Successfully saved \(chunk.count) records to iCloud")
+                
+                // Log any partial failures
+                let failures = result.saveResults.compactMap({ (key, value) -> String? in
+                    if case .failure(let error) = value {
+                        return "Failed to save \(key.recordName): \(error.localizedDescription)"
+                    }
+                    return nil
+                })
+                if !failures.isEmpty {
+                    print("⚠️ Some records failed to save:")
+                    failures.forEach { print("  - \($0)") }
+                }
+            } catch {
+                print("❌ Failed to save chunk of \(chunk.count) records: \(error)")
+                throw error
+            }
         }
         
         await MainActor.run {
@@ -165,7 +239,60 @@ final class iCloudService {
         }
     }
     
-    func fetchTasks() async throws -> (tasks: [TodoTask], projects: [Project], areas: [Area]) {
+    private func fetchExistingRecords() async throws -> [String: CKRecord] {
+        print("🔍 Fetching existing records from iCloud...")
+        let (_, _, _) = try await fetchTasks()
+        
+        // Fetch all records to build a map of existing records
+        let changesOp = CKFetchRecordZoneChangesOperation()
+        let config = CKFetchRecordZoneChangesOperation.ZoneConfiguration(
+            previousServerChangeToken: nil,
+            resultsLimit: nil,
+            desiredKeys: nil
+        )
+        changesOp.configurationsByRecordZoneID = [customZoneID: config]
+        changesOp.recordZoneIDs = [customZoneID]
+        changesOp.fetchAllChanges = true
+        
+        var existingRecords: [String: CKRecord] = [:]
+        
+        changesOp.recordWasChangedBlock = { recordID, result in
+            switch result {
+            case .success(let record):
+                existingRecords[recordID.recordName] = record
+            case .failure(let error):
+                print("Error fetching existing record \(recordID): \(error)")
+            }
+        }
+        
+        changesOp.recordZoneFetchResultBlock = { zoneID, result in
+            switch result {
+            case .success:
+                break
+            case .failure(let error):
+                print("Error fetching zone changes: \(error)")
+            }
+        }
+        
+        privateDatabase.add(changesOp)
+        
+        try await withCheckedThrowingContinuation { continuation in
+            changesOp.fetchRecordZoneChangesResultBlock = { result in
+                switch result {
+                case .success:
+                    print("✅ Fetched \(existingRecords.count) existing records")
+                    continuation.resume()
+                case .failure(let error):
+                    print("❌ Failed to fetch existing records: \(error)")
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+        
+        return existingRecords
+    }
+    
+    func fetchTasks(forceFullFetch: Bool = false) async throws -> (tasks: [TodoTask], projects: [Project], areas: [Area]) {
         await MainActor.run { self.isSyncing = true }
         defer { Task { @MainActor in self.isSyncing = false } }
         
@@ -176,10 +303,14 @@ final class iCloudService {
         // Use CKFetchRecordZoneChangesOperation to avoid queryable field issues
         let changesOp = CKFetchRecordZoneChangesOperation()
         let config = CKFetchRecordZoneChangesOperation.ZoneConfiguration(
-            previousServerChangeToken: serverChangeToken,
+            previousServerChangeToken: forceFullFetch ? nil : serverChangeToken,
             resultsLimit: nil,
             desiredKeys: nil
         )
+        
+        if forceFullFetch {
+            print("🔄 Force full fetch requested - ignoring previous change token")
+        }
         changesOp.configurationsByRecordZoneID = [customZoneID: config]
         changesOp.recordZoneIDs = [customZoneID]
         changesOp.fetchAllChanges = true
@@ -225,8 +356,10 @@ final class iCloudService {
             changesOp.fetchRecordZoneChangesResultBlock = { result in
                 switch result {
                 case .success:
+                    print("✅ Successfully fetched \(fetchedRecords.count) records from iCloud")
                     continuation.resume()
                 case .failure(let error):
+                    print("❌ Failed to fetch records from iCloud: \(error)")
                     continuation.resume(throwing: error)
                 }
             }
@@ -267,6 +400,19 @@ final class iCloudService {
         await MainActor.run {
             self.lastSyncDate = Date()
             self.syncError = nil
+        }
+        
+        print("📊 iCloud fetch completed:")
+        print("  - Areas: \(areas.count)")
+        print("  - Projects: \(projects.count)")
+        print("  - Tasks: \(tasks.count)")
+        
+        // Log some sample data for debugging
+        if let firstProject = projects.first {
+            print("  - Sample project: '\(firstProject.name)' (ID: \(firstProject.id))")
+        }
+        if let firstArea = areas.first {
+            print("  - Sample area: '\(firstArea.name)' (ID: \(firstArea.id))")
         }
         
         return (tasks, projects, areas)

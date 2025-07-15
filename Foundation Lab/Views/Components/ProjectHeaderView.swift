@@ -11,24 +11,26 @@ struct ProjectHeaderView: View {
     
     var body: some View {
         HStack {
+            // Get the current project from viewModel to ensure we have the latest data
+            let currentProject = viewModel.projects.first(where: { $0.id == project.id }) ?? project
             let allProjectTasks = viewModel.tasks.filter { $0.projectId == project.id }
             let openProjectTasks = allProjectTasks.filter { !$0.isCompleted }
             let completionProgress = allProjectTasks.isEmpty ? 0.0 : Double(allProjectTasks.count - openProjectTasks.count) / Double(allProjectTasks.count)
             
             ZStack {
                 Circle()
-                    .stroke(project.displayColor.opacity(0.3), lineWidth: 1.5)
+                    .stroke(currentProject.displayColor.opacity(0.3), lineWidth: 1.5)
                     .frame(width: 16, height: 16)
                 
                 Circle()
                     .trim(from: 0, to: completionProgress)
-                    .stroke(project.displayColor, lineWidth: 1.5)
+                    .stroke(currentProject.displayColor, lineWidth: 1.5)
                     .rotationEffect(.degrees(-90))
                     .animation(.easeInOut(duration: 0.3), value: completionProgress)
                     .frame(width: 16, height: 16)
             }
             
-            Text(project.name)
+            Text(currentProject.name)
                 .font(.headline)
                 .fontWeight(.medium)
             
@@ -79,13 +81,16 @@ struct ProjectHeaderView: View {
         }
         .padding(.vertical, 4)
         .sheet(isPresented: $showingEditNameSheet) {
-            ProjectEditNameSheet(project: project, viewModel: viewModel)
+            let currentProject = viewModel.projects.first(where: { $0.id == project.id }) ?? project
+            ProjectEditNameSheet(project: currentProject, viewModel: viewModel)
         }
         .sheet(isPresented: $showingDeadlineSheet) {
-            ProjectDeadlineSheet(project: project, viewModel: viewModel)
+            let currentProject = viewModel.projects.first(where: { $0.id == project.id }) ?? project
+            ProjectDeadlineSheet(project: currentProject, viewModel: viewModel)
         }
         .sheet(isPresented: $showingMoveSheet) {
-            ProjectMoveSheet(project: project, viewModel: viewModel)
+            let currentProject = viewModel.projects.first(where: { $0.id == project.id }) ?? project
+            ProjectMoveSheet(project: currentProject, viewModel: viewModel)
         }
     }
 }

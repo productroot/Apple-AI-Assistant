@@ -82,7 +82,7 @@ struct TaskEditToolbar: View {
 #Preview {
     TaskEditToolbar(
         task: TodoTask(title: "Sample Task"),
-        viewModel: TasksViewModel(),
+        viewModel: TasksViewModel.shared,
         onMoveRequested: {},
         onDeleteRequested: {},
         onDuplicateRequested: {}

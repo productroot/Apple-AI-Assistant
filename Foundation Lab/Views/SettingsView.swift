@@ -118,8 +118,8 @@ struct SettingsView: View {
             }
           }
           
-          Button("Sync Now") {
-            tasksViewModel.syncWithiCloud()
+          Button("Sync to iCloud") {
+            syncToiCloud()
           }
           .buttonStyle(.glassProminent)
           .disabled(isSyncing)
@@ -128,7 +128,7 @@ struct SettingsView: View {
     } header: {
       Text("iCloud Sync")
     } footer: {
-      Text("Enable iCloud sync to keep your tasks backed up and synchronized across your devices.")
+      Text("Enable iCloud sync to keep your tasks backed up and synchronized across your devices. 'Sync to iCloud' uploads your local data to iCloud.")
         .font(.caption)
         .foregroundColor(.secondary)
     }
@@ -170,7 +170,7 @@ struct SettingsView: View {
     } header: {
       Text("Data Management")
     } footer: {
-      Text("Export creates a backup of your tasks to iCloud. Import replaces local data with iCloud data. Clear removes all tasks from both local storage and iCloud.")
+      Text("Export uploads your tasks to iCloud. Import downloads and replaces local data with iCloud data. Clear removes all tasks from both local storage and iCloud.")
         .font(.caption)
         .foregroundColor(.secondary)
     }
@@ -369,6 +369,23 @@ struct SettingsView: View {
     }
   }
   
+  private func syncToiCloud() {
+    isSyncing = true
+    Task {
+      // Use the corrected sync function that pushes to iCloud
+      tasksViewModel.syncWithiCloud()
+      
+      // Give a brief moment for the sync to complete
+      try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+      
+      await MainActor.run {
+        isSyncing = false
+        alertMessage = "Local data synced to iCloud successfully!"
+        showingAlert = true
+      }
+    }
+  }
+  
   private func clearAllData() {
     isProcessing = true
     tasksViewModel.clearAllData()
@@ -379,5 +396,5 @@ struct SettingsView: View {
 }
 
 #Preview {
-  SettingsView(tasksViewModel: TasksViewModel())
+  SettingsView(tasksViewModel: TasksViewModel.shared)
 }

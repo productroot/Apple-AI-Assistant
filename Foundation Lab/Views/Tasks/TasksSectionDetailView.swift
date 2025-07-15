@@ -127,7 +127,8 @@ struct TasksSectionDetailView: View {
             }
         }
         .sheet(item: $projectToEdit) { project in
-            EditProjectView(viewModel: viewModel, project: project)
+            let currentProject = viewModel.projects.first(where: { $0.id == project.id }) ?? project
+            EditProjectView(viewModel: viewModel, project: currentProject)
         }
     }
 
@@ -641,8 +642,16 @@ struct TasksSectionDetailView: View {
         case .section(let section):
             return section.rawValue
         case .area(let area):
+            // Get the current area from viewModel to ensure we have the latest name
+            if let currentArea = viewModel.areas.first(where: { $0.id == area.id }) {
+                return currentArea.name
+            }
             return area.name
         case .project(let project):
+            // Get the current project from viewModel to ensure we have the latest name
+            if let currentProject = viewModel.projects.first(where: { $0.id == project.id }) {
+                return currentProject.name
+            }
             return project.name
         case .tag(let tag):
             return "#\(tag)"

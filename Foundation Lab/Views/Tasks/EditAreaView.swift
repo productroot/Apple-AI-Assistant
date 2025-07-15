@@ -191,7 +191,7 @@ struct EditAreaView: View {
 
 #Preview {
     EditAreaView(
-        viewModel: TasksViewModel(),
+        viewModel: TasksViewModel.shared,
         area: Area(name: "Work", icon: "briefcase", color: "blue")
     )
 }
