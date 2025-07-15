@@ -143,15 +143,16 @@ struct TaskRowView: View {
             }
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            // Leading swipe action for quick complete
-            if !isEditing && !viewModel.isMultiSelectMode && !task.isCompleted {
+            // Leading swipe action for quick complete/uncomplete
+            if !isEditing && !viewModel.isMultiSelectMode {
                 Button {
-                    print("✅ Completing task via swipe: \(task.title)")
+                    print("✅ Toggling task completion via swipe: \(task.title)")
                     viewModel.toggleTaskCompletion(task)
                 } label: {
-                    Label("Complete", systemImage: "checkmark.circle.fill")
+                    Label(task.isCompleted ? "Uncomplete" : "Complete", 
+                          systemImage: task.isCompleted ? "circle" : "checkmark.circle.fill")
                 }
-                .tint(.green)
+                .tint(task.isCompleted ? .secondary : .green)
             }
         }
         .onChange(of: isTitleFocused) { oldValue, newValue in
@@ -265,18 +266,13 @@ struct TaskRowView: View {
             
             // Completion button
             Button {
-                if !task.isCompleted && task.startedAt == nil {
-                    // Start the task if not started
-                    viewModel.startTask(task)
-                } else {
-                    // Toggle completion
-                    viewModel.toggleTaskCompletion(task)
-                }
+                // Always toggle completion - no need for start/play state
+                print("🎯 Toggling task completion: \(task.title)")
+                print("   Current state: completed=\(task.isCompleted), started=\(task.startedAt != nil)")
+                viewModel.toggleTaskCompletion(task)
             } label: {
-                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : 
-                                task.startedAt != nil ? "play.circle.fill" : "circle")
-                    .foregroundStyle(task.isCompleted ? .green : 
-                                   task.startedAt != nil ? .blue : .secondary)
+                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(task.isCompleted ? .green : .secondary)
                     .font(.title3)
                     .contentTransition(.symbolEffect)
             }

@@ -255,6 +255,12 @@ final class TasksViewModel {
             // Task is being completed
             updatedTask.completionDate = Date()
             
+            // If task wasn't started, set startedAt to completion time for duration tracking
+            if updatedTask.startedAt == nil {
+                updatedTask.startedAt = updatedTask.completionDate
+                print("⏱️ Task '\(task.title)' completed immediately (no start time)")
+            }
+            
             // Complete associated reminder if exists
             if let reminderId = updatedTask.reminderId {
                 Task {
