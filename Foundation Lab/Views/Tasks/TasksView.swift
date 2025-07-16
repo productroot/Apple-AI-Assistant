@@ -200,9 +200,6 @@ struct TasksView: View {
     private var areasAndProjectsSection: some View {
 #if os(iOS)
         if editMode == .active {
-#else
-        if editMode {
-#endif
             // Edit mode: simple list for areas
             Section(header: VStack(alignment: .leading, spacing: 2) {
                 Text("Areas & Projects")
@@ -327,7 +324,6 @@ struct TasksView: View {
                     }
                 }
             }
-#if os(iOS)
         } else {
             // Normal mode: grouped by areas
             Group {
@@ -336,6 +332,95 @@ struct TasksView: View {
             }
         }
 #else
+        if editMode {
+            // Edit mode: simple list for areas
+            Section(header: VStack(alignment: .leading, spacing: 2) {
+                Text("Areas & Projects")
+                    .font(.headline)
+                if showExplainers {
+                    Text("Organize your tasks by context and goals")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .transition(.asymmetric(
+                            insertion: .push(from: .top).combined(with: .opacity),
+                            removal: .push(from: .bottom).combined(with: .opacity)
+                        ))
+                }
+            }) {
+                ForEach(viewModel.areas) { area in
+                    HStack {
+                        Image(systemName: area.icon)
+                            .foregroundStyle(area.displayColor)
+                            .frame(width: 28)
+                        
+                        Text(area.name)
+                            .font(.body)
+                        
+                        Spacer()
+                        
+                        Text("\(areaTaskCount(for: area))")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                }
+                .onMove { from, to in
+                    viewModel.areas.move(fromOffsets: from, toOffset: to)
+                    viewModel.saveToiCloudIfEnabled()
+                }
+                .onDelete { indices in
+                    for index in indices {
+                        if index < viewModel.areas.count {
+                            areaToDelete = viewModel.areas[index]
+                            showingDeleteAreaAlert = true
+                        }
+                    }
+                }
+                
+                ForEach(viewModel.projects.filter { $0.areaId == nil }) { project in
+                    HStack {
+                        Image(systemName: project.icon)
+                            .foregroundStyle(project.displayColor)
+                            .frame(width: 28)
+                        
+                        Text(project.name)
+                            .font(.body)
+                        
+                        Spacer()
+                        
+                        let taskCount = viewModel.tasks.filter { !$0.isCompleted && $0.projectId == project.id }.count
+                        if taskCount > 0 {
+                            Text("\(taskCount)")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                }
+                .onMove { from, to in
+                    let orphans = viewModel.projects.filter { $0.areaId == nil }
+                    var reorderedOrphans = orphans
+                    reorderedOrphans.move(fromOffsets: from, toOffset: to)
+                    
+                    for (index, project) in reorderedOrphans.enumerated() {
+                        if let globalIndex = viewModel.projects.firstIndex(where: { $0.id == project.id }) {
+                            viewModel.projects[globalIndex] = project
+                        }
+                    }
+                    viewModel.saveToiCloudIfEnabled()
+                }
+                .onDelete { indices in
+                    let orphans = viewModel.projects.filter { $0.areaId == nil }
+                    for index in indices {
+                        if index < orphans.count {
+                            projectToDelete = orphans[index]
+                            showingDeleteProjectAlert = true
+                        }
+                    }
+                }
+            }
         } else {
             // Normal mode: grouped by areas
             Group {
@@ -412,9 +497,6 @@ struct TasksView: View {
     private var overlayViews: some View {
 #if os(iOS)
         if !showingQuickAddOverlay && editMode == .inactive {
-#else
-        if !showingQuickAddOverlay && !editMode {
-#endif
             VStack {
                 Spacer()
                 HStack {
@@ -429,6 +511,23 @@ struct TasksView: View {
                 }
             }
         }
+#else
+        if !showingQuickAddOverlay && !editMode {
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    FloatingActionButton(action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            showingQuickAddOverlay = true
+                        }
+                    })
+                        .padding(.trailing, 16)
+                        .padding(.bottom, 16)
+                }
+            }
+        }
+#endif
         
         if showingQuickAddOverlay {
             Color.black.opacity(0.4)

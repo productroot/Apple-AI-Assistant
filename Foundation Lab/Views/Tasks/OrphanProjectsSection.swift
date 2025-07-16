@@ -90,9 +90,6 @@ struct OrphanProjectsSection: View {
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
 #if os(iOS)
                         if editMode == .inactive {
-#else
-                        if !editMode {
-#endif
                             Button(role: .destructive) {
                                 projectToDelete = project
                                 showingDeleteProjectAlert = true
@@ -107,6 +104,23 @@ struct OrphanProjectsSection: View {
                             }
                             .tint(.orange)
                         }
+#else
+                        if !editMode {
+                            Button(role: .destructive) {
+                                projectToDelete = project
+                                showingDeleteProjectAlert = true
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            
+                            Button {
+                                projectToEdit = project
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            .tint(.orange)
+                        }
+#endif
                 }
                 .onMove { from, to in
                     moveOrphanProjects(from: from, to: to)
