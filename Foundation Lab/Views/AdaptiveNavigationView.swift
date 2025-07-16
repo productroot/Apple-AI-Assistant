@@ -10,9 +10,16 @@ import FoundationModels
 
 struct AdaptiveNavigationView: View {
     @State private var contentViewModel = ContentViewModel()
-    @State private var chatViewModel = ChatViewModel()
+    @State private var tasksViewModel = TasksViewModel.shared
+    @State private var chatViewModel: ChatViewModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private let navigationCoordinator = NavigationCoordinator.shared
+    
+    init() {
+        let tasks = TasksViewModel.shared
+        _tasksViewModel = State(initialValue: tasks)
+        _chatViewModel = State(initialValue: ChatViewModel(tasksViewModel: tasks))
+    }
     
     var body: some View {
 #if os(iOS)
@@ -34,9 +41,9 @@ struct AdaptiveNavigationView: View {
             get: { navigationCoordinator.tabSelection },
             set: { navigationCoordinator.tabSelection = $0 }
         )) {
-            Tab("Examples", systemImage: "sparkles", value: .examples) {
+            Tab("Tasks", systemImage: "checklist", value: .tasks) {
                 NavigationStack {
-                    ExamplesView(viewModel: $contentViewModel)
+                    TasksView(viewModel: tasksViewModel)
                 }
             }
             
@@ -46,9 +53,15 @@ struct AdaptiveNavigationView: View {
                 }
             }
             
+            Tab("Examples", systemImage: "sparkles", value: .examples) {
+                NavigationStack {
+                    ExamplesView(viewModel: $contentViewModel)
+                }
+            }
+            
             Tab("Settings", systemImage: "gear", value: .settings) {
                 NavigationStack {
-                    SettingsView()
+                    SettingsView(tasksViewModel: tasksViewModel)
                 }
             }
         }
@@ -82,10 +95,14 @@ struct AdaptiveNavigationView: View {
     
     @ViewBuilder
     private var detailView: some View {
-        switch navigationCoordinator.splitViewSelection ?? .examples {
+        switch navigationCoordinator.splitViewSelection ?? .tasks {
         case .examples:
             NavigationStack {
                 ExamplesView(viewModel: $contentViewModel)
+            }
+        case .tasks:
+            NavigationStack {
+                TasksView(viewModel: tasksViewModel)
             }
         case .chat:
             NavigationStack {
@@ -93,7 +110,7 @@ struct AdaptiveNavigationView: View {
             }
         case .settings:
             NavigationStack {
-                SettingsView()
+                SettingsView(tasksViewModel: tasksViewModel)
             }
         }
     }

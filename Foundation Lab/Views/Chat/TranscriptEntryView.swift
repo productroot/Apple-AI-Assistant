@@ -20,30 +20,47 @@ struct TranscriptEntryView: View {
             }
             
         case .response(let response):
-            if let text = extractText(from: response.segments), !text.isEmpty {
+            if let text = extractText(from: response.segments), !text.isEmpty, text != "null" {
                 MessageBubbleView(message: ChatMessage(entryID: entry.id, content: text, isFromUser: false))
                     .id(entry.id)
             }
             
         case .toolCalls(let toolCalls):
             ForEach(Array(toolCalls.enumerated()), id: \.offset) { index, toolCall in
-                MessageBubbleView(message: ChatMessage(
-                    entryID: entry.id,
-                    content: "🔧 Calling tool: \(toolCall.toolName)",
-                    isFromUser: false
-                ))
+                let toolDisplayName = formatToolName(toolCall.toolName)
+                ToolStatusView(
+                    icon: "🔧",
+                    text: "Tool used: \(toolDisplayName)"
+                )
                 .id("\(entry.id)-tool-\(index)")
             }
             
         case .toolOutput(let toolOutput):
+            // First try to extract text from segments
             if let text = extractText(from: toolOutput.segments), !text.isEmpty {
-                MessageBubbleView(message: ChatMessage(
-                    entryID: entry.id,
-                    content: "🔧 Tool result: \(text)",
-                    isFromUser: false
-                ))
-                .id(entry.id)
-                .animation(.easeInOut(duration: 0.3), value: text)
+                // Check if the text looks like JSON (starts with { and contains "status")
+                if text.hasPrefix("{") && text.contains("\"status\"") {
+                    // This is raw JSON output - show a simple success message instead
+                    let isSuccess = text.contains("\"success\"")
+                    let icon = isSuccess ? "✅" : "❌"
+                    let message = isSuccess ? "Tool completed successfully" : "Tool failed"
+                    ToolStatusView(
+                        icon: icon,
+                        text: message
+                    )
+                    .id(entry.id)
+                } else {
+                    // This is formatted text - show it as a tool status
+                    ToolStatusView(
+                        icon: "🔧",
+                        text: "Tool result: \(text)"
+                    )
+                    .id(entry.id)
+                }
+            } else {
+                // If no text segments, don't show anything
+                // The AI will generate a proper response
+                EmptyView()
             }
             
         case .instructions:
@@ -64,5 +81,60 @@ struct TranscriptEntryView: View {
         }.joined(separator: " ")
         
         return text.isEmpty ? nil : text
+    }
+    
+    private func formatToolName(_ toolName: String) -> String {
+        switch toolName {
+        case "manageReminders":
+            return "Manage Reminders"
+        case "manageCalendar":
+            return "Manage Calendar"
+        case "searchPokemon":
+            return "Search Pokémon"
+        case "getWeather":
+            return "Get Weather"
+        default:
+            // Convert camelCase to Title Case
+            let words = toolName.split { $0.isUppercase }
+            if words.isEmpty {
+                return toolName.capitalized
+            }
+            var result = ""
+            var currentIndex = toolName.startIndex
+            for word in words {
+                if currentIndex < toolName.endIndex {
+                    let char = toolName[currentIndex]
+                    result += String(char).uppercased() + word
+                    currentIndex = toolName.index(after: toolName.index(currentIndex, offsetBy: word.count))
+                }
+            }
+            return result
+        }
+    }
+    
+    private func formatToolResult(_ toolOutput: Transcript.ToolOutput) -> String {
+        // Don't show the raw tool output - the AI will generate a proper response
+        // Return empty string to hide the technical JSON output
+        return ""
+    }
+}
+
+// MARK: - Tool Status View
+
+struct ToolStatusView: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(icon)
+                .font(.caption)
+            Text(text)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Spacer()
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 4)
     }
 }

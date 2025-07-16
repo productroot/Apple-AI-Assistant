@@ -196,3 +196,95 @@ struct BusinessIdea {
   @Guide(description: "Expected timeline or phases for launch and growth")
   let timeline: String?
 }
+
+// MARK: - Project Description Model
+
+@Generable
+struct ProjectDescription {
+  @Guide(description: "A comprehensive description of the project's purpose, goals, and scope. Should be informative and inspiring.")
+  let description: String
+  
+  @Guide(description: "Key objectives or deliverables for this project")
+  let objectives: [String]
+  
+  @Guide(description: "Expected outcomes or benefits of completing this project")
+  let expectedOutcomes: [String]
+  
+  @Guide(description: "Primary focus area or category of the project based on its area assignment")
+  let focusArea: String?
+}
+
+// MARK: - Task Checklist Model
+
+@Generable
+struct TaskChecklist {
+  @Guide(description: "A list of actionable checklist items for completing the task. Each item should be specific, clear, and achievable.")
+  let items: [String]
+  
+  @Guide(description: "Estimated time in minutes for completing all checklist items")
+  let estimatedTotalMinutes: Int?
+  
+  @Guide(description: "Suggested order of completion: 'sequential' if items should be done in order, 'parallel' if they can be done in any order")
+  let completionOrder: String?
+}
+
+// MARK: - Task Duration Estimate Model
+
+@Generable
+struct TaskDurationEstimate {
+  @Guide(description: "Estimated time in minutes for completing the task based on its title, description, checklist items and historical data. Provide a realistic estimate considering the complexity and scope of the task.")
+  let minutes: Int
+}
+
+// MARK: - Task Optimization Models
+
+@Generable
+struct TaskOptimizationAnalysis {
+  @Guide(description: "List of overdue tasks or tasks requiring immediate attention")
+  let urgentTasks: [OptimizedTask]
+  
+  @Guide(description: "Tasks recommended to complete today based on priority, deadlines, and estimated duration")
+  let todayTasks: [OptimizedTask]
+  
+  @Guide(description: "Tasks to complete this week")
+  let thisWeekTasks: [OptimizedTask]
+  
+  @Guide(description: "Tasks that can be done later without negative impact")
+  let laterTasks: [OptimizedTask]
+  
+  @Guide(description: "Tasks that are blocked by other tasks or dependencies")
+  let blockedTasks: [OptimizedTask]
+  
+  @Guide(description: "Tasks that could be delegated or automated based on patterns and tags")
+  let delegatableTasks: [OptimizedTask]
+  
+  @Guide(description: "Quick win tasks - short duration, low complexity, high impact")
+  let quickWins: [OptimizedTask]
+  
+  @Guide(description: "Overall optimization insights and recommendations")
+  let insights: [String]
+}
+
+@Generable
+struct OptimizedTask {
+  @Guide(description: "The task ID (UUID string)")
+  let taskId: String
+  
+  @Guide(description: "Recommended priority using Eisenhower matrix combined with ABC method: A1 (urgent & important), A2 (important not urgent), B1 (urgent not important), B2 (routine), C (nice to have)")
+  let recommendedPriority: String
+  
+  @Guide(description: "Reason for the recommendation")
+  let reasoning: String
+  
+  @Guide(description: "Suggested actions: 'do_now', 'schedule', 'delegate', 'automate', 'delete', 'batch_with_similar'")
+  let suggestedAction: String
+  
+  @Guide(description: "If batching is suggested, list of similar task IDs to batch with")
+  let batchWithTaskIds: [String]?
+  
+  @Guide(description: "Estimated focus time needed in minutes")
+  let estimatedFocusMinutes: Int?
+  
+  @Guide(description: "Best time slot for this task: 'morning', 'afternoon', 'evening', 'anytime'")
+  let optimalTimeSlot: String?
+}

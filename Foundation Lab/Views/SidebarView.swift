@@ -33,6 +33,8 @@ extension TabSelection {
         switch self {
         case .examples:
             return "sparkles"
+        case .tasks:
+            return "checklist"
         case .chat:
             return "bubble.left.and.bubble.right"
         case .settings:
@@ -45,10 +47,12 @@ extension TabSelection {
         switch self {
         case .examples:
             return "1"
-        case .chat:
+        case .tasks:
             return "2"
-        case .settings:
+        case .chat:
             return "3"
+        case .settings:
+            return "4"
         }
     }
 #endif
