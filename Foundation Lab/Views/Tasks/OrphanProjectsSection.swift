@@ -1,11 +1,18 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 struct OrphanProjectsSection: View {
     let viewModel: TasksViewModel
     @Binding var projectToEdit: Project?
     @Binding var projectToDelete: Project?
     @Binding var showingDeleteProjectAlert: Bool
+#if os(iOS)
     @Binding var editMode: EditMode
+#else
+    @Binding var editMode: Bool
+#endif
     let showExplainers: Bool
     var onNavigateToProject: ((Project) -> Void)?
     
@@ -69,11 +76,23 @@ struct OrphanProjectsSection: View {
                         .padding(.vertical, 8)
                         .padding(.horizontal, 16)
                     }
+#if os(iOS)
                     .disabled(editMode == .active)
+#else
+                    .disabled(editMode)
+#endif
                     .listRowInsets(EdgeInsets())
+#if os(iOS)
                     .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
+#else
+                    .listRowBackground(Color(NSColor.controlBackgroundColor))
+#endif
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+#if os(iOS)
                         if editMode == .inactive {
+#else
+                        if !editMode {
+#endif
                             Button(role: .destructive) {
                                 projectToDelete = project
                                 showingDeleteProjectAlert = true
@@ -88,7 +107,6 @@ struct OrphanProjectsSection: View {
                             }
                             .tint(.orange)
                         }
-                    }
                 }
                 .onMove { from, to in
                     moveOrphanProjects(from: from, to: to)

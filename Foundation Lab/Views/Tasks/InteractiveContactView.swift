@@ -1,5 +1,10 @@
 import SwiftUI
 import Contacts
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 struct InteractiveContactView: View {
     let contact: CNContact
@@ -79,13 +84,24 @@ struct InteractiveContactView: View {
     
     private func contactImage(size: CGFloat) -> some View {
         Group {
-            if let imageData = contact.imageData,
-               let image = UIImage(data: imageData) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: size, height: size)
-                    .clipShape(Circle())
+            if let imageData = contact.imageData {
+#if os(iOS)
+                if let image = UIImage(data: imageData) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: size, height: size)
+                        .clipShape(Circle())
+                }
+#else
+                if let image = NSImage(data: imageData) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: size, height: size)
+                        .clipShape(Circle())
+                }
+#endif
             } else {
                 Image(systemName: "person.circle.fill")
                     .font(.system(size: size))
@@ -104,13 +120,24 @@ struct ContactDetailView: View {
             List {
                 Section {
                     HStack {
-                        if let imageData = contact.imageData,
-                           let image = UIImage(data: imageData) {
-                            Image(uiImage: image)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 80, height: 80)
-                                .clipShape(Circle())
+                        if let imageData = contact.imageData {
+#if os(iOS)
+                            if let image = UIImage(data: imageData) {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(Circle())
+                            }
+#else
+                            if let image = NSImage(data: imageData) {
+                                Image(nsImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(Circle())
+                            }
+#endif
                         } else {
                             Image(systemName: "person.circle.fill")
                                 .font(.system(size: 80))

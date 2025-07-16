@@ -1,4 +1,9 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 struct QuickAddOverlay: View {
     @Binding var isPresented: Bool
@@ -106,7 +111,11 @@ struct QuickAddOverlay: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 16)
+#if os(iOS)
                 .fill(Color(UIColor.systemGray6))
+#else
+                .fill(Color(NSColor.controlColor))
+#endif
                 .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: -5)
         )
     }

@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 struct TasksView: View {
     let viewModel: TasksViewModel
@@ -16,7 +19,11 @@ struct TasksView: View {
     @State private var showingDeleteProjectAlert = false
     @State private var areaToDelete: Area?
     @State private var projectToDelete: Project?
+#if os(iOS)
     @State private var editMode: EditMode = .inactive
+#else
+    @State private var editMode: Bool = false
+#endif
     @State private var showingOptimization = false
     @State private var showingWorkloadBalance = false
     @State private var showingRecurrenceSuggestions = false
@@ -37,6 +44,7 @@ struct TasksView: View {
     
     private var tasksList: some View {
         List {
+#if os(iOS)
             if editMode == .inactive {
                 mainSections
                 areasAndProjectsSection
@@ -44,6 +52,15 @@ struct TasksView: View {
                 // In edit mode, show the editable list
                 areasAndProjectsSection
             }
+#else
+            if !editMode {
+                mainSections
+                areasAndProjectsSection
+            } else {
+                // In edit mode, show the editable list
+                areasAndProjectsSection
+            }
+#endif
         }
         .id("\(viewModel.projects.count)-\(viewModel.areas.count)-\(viewModel.tasks.count)")
         .listStyle(.insetGrouped)
@@ -56,7 +73,9 @@ struct TasksView: View {
             aiToolsButton
             helpAndEditButtons
         }
+#if os(iOS)
         .environment(\.editMode, $editMode)
+#endif
         .modifier(TasksViewSheets(
             showingAddTask: $showingAddTask,
             showingOptimization: $showingOptimization,
@@ -179,7 +198,11 @@ struct TasksView: View {
     
     @ViewBuilder
     private var areasAndProjectsSection: some View {
+#if os(iOS)
         if editMode == .active {
+#else
+        if editMode {
+#endif
             // Edit mode: simple list for areas
             Section(header: VStack(alignment: .leading, spacing: 2) {
                 Text("Areas & Projects")
@@ -304,6 +327,7 @@ struct TasksView: View {
                     }
                 }
             }
+#if os(iOS)
         } else {
             // Normal mode: grouped by areas
             Group {
@@ -311,6 +335,15 @@ struct TasksView: View {
                 orphanProjectsSection
             }
         }
+#else
+        } else {
+            // Normal mode: grouped by areas
+            Group {
+                areasSection
+                orphanProjectsSection
+            }
+        }
+#endif
     }
     
     @ViewBuilder
@@ -377,7 +410,11 @@ struct TasksView: View {
     
     @ViewBuilder
     private var overlayViews: some View {
+#if os(iOS)
         if !showingQuickAddOverlay && editMode == .inactive {
+#else
+        if !showingQuickAddOverlay && !editMode {
+#endif
             VStack {
                 Spacer()
                 HStack {

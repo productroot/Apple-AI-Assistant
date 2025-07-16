@@ -1,4 +1,9 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 struct InlineProjectCreationView: View {
     @Binding var projectName: String
@@ -47,7 +52,11 @@ struct InlineProjectCreationView: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
+#if os(iOS)
         .background(Color(UIColor.secondarySystemBackground))
+#else
+        .background(Color(NSColor.controlBackgroundColor))
+#endif
         .onAppear {
             isFocused = true
         }

@@ -1,4 +1,9 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 struct InlineAreaCreationView: View {
     @Binding var areaName: String
@@ -41,7 +46,11 @@ struct InlineAreaCreationView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+#if os(iOS)
         .background(Color(UIColor.secondarySystemGroupedBackground))
+#else
+        .background(Color(NSColor.controlBackgroundColor))
+#endif
         .cornerRadius(10)
         .onAppear {
             isFocused = true
@@ -58,5 +67,9 @@ struct InlineAreaCreationView: View {
         )
         .padding()
     }
+#if os(iOS)
     .background(Color(UIColor.systemGroupedBackground))
+#else
+    .background(Color(NSColor.controlBackgroundColor))
+#endif
 }

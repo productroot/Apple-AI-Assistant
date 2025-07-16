@@ -1,5 +1,10 @@
 import SwiftUI
 import Contacts
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 struct ContactSuggestionView: View {
     let searchText: String
@@ -99,13 +104,24 @@ struct ContactRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack {
-                if let imageData = contact.imageData,
-                   let image = UIImage(data: imageData) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 32, height: 32)
-                        .clipShape(Circle())
+                if let imageData = contact.imageData {
+#if os(iOS)
+                    if let image = UIImage(data: imageData) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 32, height: 32)
+                            .clipShape(Circle())
+                    }
+#else
+                    if let image = NSImage(data: imageData) {
+                        Image(nsImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 32, height: 32)
+                            .clipShape(Circle())
+                    }
+#endif
                 } else {
                     Image(systemName: "person.circle.fill")
                         .font(.system(size: 32))

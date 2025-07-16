@@ -1,4 +1,9 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 struct AddItemTypeSelectionView: View {
     @Binding var isPresented: Bool
@@ -42,7 +47,11 @@ struct AddItemTypeSelectionView: View {
                                 .foregroundColor(.secondary)
                         }
                         .padding()
+#if os(iOS)
                         .background(Color(UIColor.secondarySystemBackground))
+#else
+                        .background(Color(NSColor.controlBackgroundColor))
+#endif
                         .cornerRadius(10)
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -71,7 +80,11 @@ struct AddItemTypeSelectionView: View {
                                 .foregroundColor(.secondary)
                         }
                         .padding()
+#if os(iOS)
                         .background(Color(UIColor.secondarySystemBackground))
+#else
+                        .background(Color(NSColor.controlBackgroundColor))
+#endif
                         .cornerRadius(10)
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -100,7 +113,11 @@ struct AddItemTypeSelectionView: View {
                                 .foregroundColor(.secondary)
                         }
                         .padding()
+#if os(iOS)
                         .background(Color(UIColor.secondarySystemBackground))
+#else
+                        .background(Color(NSColor.controlBackgroundColor))
+#endif
                         .cornerRadius(10)
                     }
                     .buttonStyle(PlainButtonStyle())

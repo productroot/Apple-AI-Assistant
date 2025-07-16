@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 struct AreaSectionView: View {
     let area: Area
@@ -12,7 +15,11 @@ struct AreaSectionView: View {
     @Binding var projectToEdit: Project?
     @Binding var projectToDelete: Project?
     @Binding var showingDeleteProjectAlert: Bool
+#if os(iOS)
     @Binding var editMode: EditMode
+#else
+    @Binding var editMode: Bool
+#endif
     let onSaveProject: () -> Void
     let onCancelProject: () -> Void
     var onNavigateToProject: ((Project) -> Void)?
@@ -57,7 +64,11 @@ struct AreaSectionView: View {
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+#if os(iOS)
                 if editMode == .inactive {
+#else
+                if !editMode {
+#endif
                     Button(role: .destructive) {
                         areaToDelete = area
                         showingDeleteAreaAlert = true
@@ -152,11 +163,23 @@ struct AreaSectionView: View {
                     .padding(.vertical, 8)
                     .padding(.horizontal, 16)
                 }
+#if os(iOS)
                 .disabled(editMode == .active)
+#else
+                .disabled(editMode)
+#endif
                 .listRowInsets(EdgeInsets())
+#if os(iOS)
                 .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
+#else
+                .listRowBackground(Color(NSColor.controlBackgroundColor))
+#endif
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+#if os(iOS)
                     if editMode == .inactive {
+#else
+                    if !editMode {
+#endif
                         Button(role: .destructive) {
                             projectToDelete = project
                             showingDeleteProjectAlert = true
@@ -172,7 +195,6 @@ struct AreaSectionView: View {
                         .tint(.orange)
                     }
                 }
-            }
             .onMove { from, to in
                 moveProjects(in: area, from: from, to: to)
             }
