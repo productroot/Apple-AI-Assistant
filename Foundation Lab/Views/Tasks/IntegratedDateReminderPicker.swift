@@ -6,6 +6,11 @@
 //
 
 import SwiftUI
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 struct IntegratedDateReminderPicker: View {
     @Binding var scheduledDate: Date?
@@ -141,16 +146,26 @@ struct IntegratedDateReminderPicker: View {
                                 selection: $selectedTime,
                                 displayedComponents: .hourAndMinute
                             )
+#if os(iOS)
                             .datePickerStyle(.wheel)
+#else
+                            .datePickerStyle(.field)
+#endif
                             .labelsHidden()
                             .frame(height: 150)
                         }
                     }
                 }
+#if os(iOS)
                 .listStyle(.insetGrouped)
+#else
+                .listStyle(.sidebar)
+#endif
             }
             .navigationTitle("When?")
+#if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+#endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -176,7 +191,9 @@ struct IntegratedDateReminderPicker: View {
                     .datePickerStyle(.graphical)
                     .padding()
                     .navigationTitle("Select Date")
+#if os(iOS)
                     .navigationBarTitleDisplayMode(.inline)
+#endif
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Done") {
@@ -328,7 +345,11 @@ struct DateReminderMenuLabel: View {
             view
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(Color(.systemGray5))
+#if os(iOS)
+                .background(Color(UIColor.systemGray5))
+#else
+                .background(Color(NSColor.systemGray))
+#endif
                 .cornerRadius(6)
         }
     }

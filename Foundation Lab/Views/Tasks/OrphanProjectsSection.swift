@@ -121,6 +121,7 @@ struct OrphanProjectsSection: View {
                             .tint(.orange)
                         }
 #endif
+                    }
                 }
                 .onMove { from, to in
                     moveOrphanProjects(from: from, to: to)

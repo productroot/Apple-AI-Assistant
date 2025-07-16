@@ -6,6 +6,11 @@
 //
 
 import SwiftUI
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 struct ChatInstructionsView: View {
     @Binding var showInstructions: Bool
@@ -68,7 +73,11 @@ struct ChatInstructionsView: View {
                         }
                         .padding(Spacing.small)
                         .frame(maxWidth: .infinity, minHeight: 100, maxHeight: 100, alignment: .topLeading)
-                        .background(Color(.systemGray6))
+#if os(iOS)
+                        .background(Color(UIColor.systemGray6))
+#else
+                        .background(Color(NSColor.systemGray))
+#endif
                         .cornerRadius(8)
                         .onAppear {
                             print("📱 ChatInstructionsView - Current instructions: \(instructions)")

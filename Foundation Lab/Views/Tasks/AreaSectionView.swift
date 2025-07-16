@@ -223,6 +223,7 @@ struct AreaSectionView: View {
                     }
 #endif
                 }
+            }
             .onMove { from, to in
                 moveProjects(in: area, from: from, to: to)
             }

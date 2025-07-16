@@ -8,6 +8,11 @@
 import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 import Contacts
 
 // MARK: - Recurrence Rule
@@ -250,11 +255,19 @@ extension Color {
         case "systemPink": return Color(.systemPink)
         case "systemBrown": return Color(.systemBrown)
         case "systemGray": return Color(.systemGray)
-        case "systemGray2": return Color(.systemGray2)
-        case "systemGray3": return Color(.systemGray3)
-        case "systemGray4": return Color(.systemGray4)
-        case "systemGray5": return Color(.systemGray5)
-        case "systemGray6": return Color(.systemGray6)
+#if os(iOS)
+        case "systemGray2": return Color(UIColor.systemGray2)
+        case "systemGray3": return Color(UIColor.systemGray3)
+        case "systemGray4": return Color(UIColor.systemGray4)
+        case "systemGray5": return Color(UIColor.systemGray5)
+        case "systemGray6": return Color(UIColor.systemGray6)
+#else
+        case "systemGray2": return Color(NSColor.systemGray)
+        case "systemGray3": return Color(NSColor.systemGray)
+        case "systemGray4": return Color(NSColor.systemGray)
+        case "systemGray5": return Color(NSColor.systemGray)
+        case "systemGray6": return Color(NSColor.systemGray)
+#endif
         default: return Color(colorName)
         }
     }

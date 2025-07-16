@@ -1,4 +1,9 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 struct ProjectHeaderView: View {
     let project: Project
@@ -42,7 +47,11 @@ struct ProjectHeaderView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color(.systemGray5))
+#if os(iOS)
+                    .background(Color(UIColor.systemGray5))
+#else
+                    .background(Color(NSColor.systemGray))
+#endif
                     .cornerRadius(4)
             }
             
@@ -124,8 +133,11 @@ struct ProjectEditNameSheet: View {
                 }
             }
             .navigationTitle("Edit Project Name")
+#if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+#endif
             .toolbar {
+#if os(iOS)
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
@@ -139,6 +151,21 @@ struct ProjectEditNameSheet: View {
                     .fontWeight(.medium)
                     .disabled(editedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
+#else
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Save") {
+                        saveProjectName()
+                    }
+                    .fontWeight(.medium)
+                    .disabled(editedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+#endif
             }
         }
     }
@@ -177,7 +204,11 @@ struct ProjectDeadlineSheet: View {
                 if hasDeadline {
                     DatePicker("Deadline", selection: $selectedDate, displayedComponents: .date)
                         .datePickerStyle(.graphical)
-                        .background(Color(.systemBackground))
+#if os(iOS)
+                        .background(Color(UIColor.systemBackground))
+#else
+                        .background(Color(NSColor.windowBackgroundColor))
+#endif
                         .cornerRadius(8)
                         .padding(.vertical, 8)
                     
@@ -189,8 +220,11 @@ struct ProjectDeadlineSheet: View {
                 }
             }
             .navigationTitle("Project Deadline")
+#if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+#endif
             .toolbar {
+#if os(iOS)
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
@@ -205,6 +239,22 @@ struct ProjectDeadlineSheet: View {
                         dismiss()
                     }
                 }
+#else
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Save") {
+                        var updatedProject = project
+                        updatedProject.deadline = hasDeadline ? selectedDate : nil
+                        viewModel.updateProject(updatedProject)
+                        dismiss()
+                    }
+                }
+#endif
             }
         }
     }
@@ -271,8 +321,11 @@ struct ProjectMoveSheet: View {
                 }
             }
             .navigationTitle("Move Project")
+#if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+#endif
             .toolbar {
+#if os(iOS)
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
@@ -296,6 +349,31 @@ struct ProjectMoveSheet: View {
                         dismiss()
                     }
                 }
+#else
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Move") {
+                        var updatedProject = project
+                        updatedProject.areaId = selectedAreaId
+                        viewModel.updateProject(updatedProject)
+                        
+                        // Move all tasks in this project to the new area
+                        let tasksToUpdate = viewModel.tasks.filter { $0.projectId == project.id }
+                        for task in tasksToUpdate {
+                            var updatedTask = task
+                            updatedTask.areaId = selectedAreaId
+                            viewModel.updateTask(updatedTask)
+                        }
+                        
+                        dismiss()
+                    }
+                }
+#endif
             }
         }
     }

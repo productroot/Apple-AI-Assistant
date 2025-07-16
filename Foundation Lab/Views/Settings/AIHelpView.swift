@@ -6,6 +6,11 @@
 //
 
 import SwiftUI
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 struct AIHelpView: View {
     var body: some View {
@@ -181,7 +186,9 @@ struct AIHelpView: View {
             }
         }
         .navigationTitle("AI Features")
+#if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+#endif
     }
 }
 
@@ -257,7 +264,11 @@ struct AIFeatureCard: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+#if os(iOS)
+        .background(Color(UIColor.systemGray6))
+#else
+        .background(Color(NSColor.systemGray))
+#endif
         .cornerRadius(12)
         .onTapGesture {
             withAnimation(.easeInOut(duration: 0.3)) {

@@ -47,7 +47,11 @@ struct ContactSuggestionView: View {
                 .frame(maxHeight: 200)
             }
         }
+#if os(iOS)
         .background(Color(UIColor.secondarySystemBackground))
+#else
+        .background(Color(NSColor.controlBackgroundColor))
+#endif
         .cornerRadius(8)
         .shadow(radius: 4)
         .onAppear {
@@ -151,7 +155,11 @@ struct ContactRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
+#if os(iOS)
         .background(Color(UIColor.secondarySystemBackground))
+#else
+        .background(Color(NSColor.controlBackgroundColor))
+#endif
         .hoverEffect()
     }
 }

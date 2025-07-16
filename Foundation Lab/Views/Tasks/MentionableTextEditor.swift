@@ -1,5 +1,10 @@
 import SwiftUI
 import Contacts
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 struct MentionableTextEditor: View {
     @Binding var text: String
@@ -19,9 +24,11 @@ struct MentionableTextEditor: View {
                 .onChange(of: text) { oldValue, newValue in
                     detectMentions(in: newValue)
                 }
+#if os(iOS)
                 .onReceive(NotificationCenter.default.publisher(for: UITextView.textDidChangeNotification)) { _ in
                     updateCursorPosition()
                 }
+#endif
                 .overlay(alignment: .topLeading) {
                     if text.isEmpty {
                         Text(placeholder)
