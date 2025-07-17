@@ -1,13 +1,13 @@
 //
-//  FoundationLabAppShortcuts.swift
-//  FoundationLab
+//  SophiaFlowAppShortcuts.swift
+//  Sophia Flow
 //
 //  Created by Rudrank Riyam on 6/25/25.
 //
 
 import AppIntents
 
-struct FoundationLabAppShortcuts: AppShortcutsProvider {
+struct SophiaFlowAppShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
             intent: OpenChatIntent(),

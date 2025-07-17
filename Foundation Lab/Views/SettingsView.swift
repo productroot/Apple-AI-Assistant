@@ -246,6 +246,12 @@ struct SettingsView: View {
           }
         } header: {
           Text("About")
+        } footer: {
+          VStack(alignment: .leading, spacing: 4) {
+            Text("\"Sophia\" (wisdom, feminine name) + \"Flow\" for graceful, AI-driven task workflows")
+              .font(.caption)
+              .foregroundColor(.secondary)
+          }
         }
       }
       .formStyle(.grouped)

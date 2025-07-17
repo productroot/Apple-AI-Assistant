@@ -7,14 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0A5454AB2E1148A8002C2152 /* Foundation Lab.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0A5454A72E1148A8002C2152 /* Foundation Lab.icon */; };
+		0A5454AB2E1148A8002C2152 /* Sophia Flow.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0A5454A72E1148A8002C2152 /* Sophia Flow.icon */; };
 		894F6A552E1B26DB0089EAEB /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 894F6A542E1B26DB0089EAEB /* CLAUDE.md */; };
 		89A5097F2E1D6B58001C25E9 /* GEMINI.md in Resources */ = {isa = PBXBuildFile; fileRef = 89A5097E2E1D6B58001C25E9 /* GEMINI.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0A5454A72E1148A8002C2152 /* Foundation Lab.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Foundation Lab.icon"; sourceTree = "<group>"; };
-		0AAE4FFF2DF76E6600838F13 /* Foundation Lab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Foundation Lab.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A5454A72E1148A8002C2152 /* Sophia Flow.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Sophia Flow.icon"; sourceTree = "<group>"; };
+		0AAE4FFF2DF76E6600838F13 /* Sophia Flow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Sophia Flow.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		0ABC0C9B2E09AB5300A09018 /* Physiqa.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Physiqa.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0ADB46DC2E0CE81900C29293 /* Psylean.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Psylean.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0ADB48272E0D84EE00C29293 /* Murmer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Murmer.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -38,7 +38,7 @@
 			path = Physiqa;
 			sourceTree = "<group>";
 		};
-		0ADB46AD2E0CE6C100C29293 /* Foundation Lab */ = {
+		0ADB46AD2E0CE6C100C29293 /* Sophia Flow */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Foundation Lab";
 			sourceTree = "<group>";
@@ -95,19 +95,19 @@
 			children = (
 				894F6A542E1B26DB0089EAEB /* CLAUDE.md */,
 				89A5097E2E1D6B58001C25E9 /* GEMINI.md */,
-				0ADB46AD2E0CE6C100C29293 /* Foundation Lab */,
+				0ADB46AD2E0CE6C100C29293 /* Sophia Flow */,
 				0ABC0C9C2E09AB5300A09018 /* Physiqa */,
 				0ADB46DD2E0CE81900C29293 /* Psylean */,
 				0ADB48282E0D84EE00C29293 /* Murmer */,
 				0AAE50002DF76E6600838F13 /* Products */,
-				0A5454A72E1148A8002C2152 /* Foundation Lab.icon */,
+				0A5454A72E1148A8002C2152 /* Sophia Flow.icon */,
 			);
 			sourceTree = "<group>";
 		};
 		0AAE50002DF76E6600838F13 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				0AAE4FFF2DF76E6600838F13 /* Foundation Lab.app */,
+				0AAE4FFF2DF76E6600838F13 /* Sophia Flow.app */,
 				0ABC0C9B2E09AB5300A09018 /* Physiqa.app */,
 				0ADB46DC2E0CE81900C29293 /* Psylean.app */,
 				0ADB48272E0D84EE00C29293 /* Murmer.app */,
@@ -118,9 +118,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		0AAE4FFE2DF76E6600838F13 /* Foundation Lab */ = {
+		0AAE4FFE2DF76E6600838F13 /* Sophia Flow */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0AAE500A2DF76E6800838F13 /* Build configuration list for PBXNativeTarget "Foundation Lab" */;
+			buildConfigurationList = 0AAE500A2DF76E6800838F13 /* Build configuration list for PBXNativeTarget "Sophia Flow" */;
 			buildPhases = (
 				0AAE4FFB2DF76E6600838F13 /* Sources */,
 				0AAE4FFC2DF76E6600838F13 /* Frameworks */,
@@ -131,13 +131,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				0ADB46AD2E0CE6C100C29293 /* Foundation Lab */,
+				0ADB46AD2E0CE6C100C29293 /* Sophia Flow */,
 			);
-			name = "Foundation Lab";
+			name = "Sophia Flow";
 			packageProductDependencies = (
 			);
 			productName = FoundationLab;
-			productReference = 0AAE4FFF2DF76E6600838F13 /* Foundation Lab.app */;
+			productReference = 0AAE4FFF2DF76E6600838F13 /* Sophia Flow.app */;
 			productType = "com.apple.product-type.application";
 		};
 		0ABC0C9A2E09AB5300A09018 /* Physiqa */ = {
@@ -246,7 +246,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				0AAE4FFE2DF76E6600838F13 /* Foundation Lab */,
+				0AAE4FFE2DF76E6600838F13 /* Sophia Flow */,
 				0ABC0C9A2E09AB5300A09018 /* Physiqa */,
 				0ADB46DB2E0CE81900C29293 /* Psylean */,
 				0ADB48262E0D84EE00C29293 /* Murmer */,
@@ -259,7 +259,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0A5454AB2E1148A8002C2152 /* Foundation Lab.icon in Resources */,
+				0A5454AB2E1148A8002C2152 /* Sophia Flow.icon in Resources */,
 				89A5097F2E1D6B58001C25E9 /* GEMINI.md in Resources */,
 				894F6A552E1B26DB0089EAEB /* CLAUDE.md in Resources */,
 			);
@@ -439,7 +439,7 @@
 		0AAE500B2DF76E6800838F13 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "Foundation Lab";
+				ASSETCATALOG_COMPILER_APPICON_NAME = "Sophia Flow";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				AUTOMATION_APPLE_EVENTS = NO;
@@ -463,7 +463,7 @@
 				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Foundation Lab";
+				INFOPLIST_KEY_CFBundleDisplayName = "Sophia Flow";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "This app needs access to Apple Music to search and play music from your library.";
@@ -514,7 +514,7 @@
 		0AAE500C2DF76E6800838F13 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "Foundation Lab";
+				ASSETCATALOG_COMPILER_APPICON_NAME = "Sophia Flow";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				AUTOMATION_APPLE_EVENTS = NO;
@@ -538,7 +538,7 @@
 				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Foundation Lab";
+				INFOPLIST_KEY_CFBundleDisplayName = "Sophia Flow";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "This app needs access to Apple Music to search and play music from your library.";
@@ -900,7 +900,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		0AAE500A2DF76E6800838F13 /* Build configuration list for PBXNativeTarget "Foundation Lab" */ = {
+		0AAE500A2DF76E6800838F13 /* Build configuration list for PBXNativeTarget "Sophia Flow" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0AAE500B2DF76E6800838F13 /* Debug */,

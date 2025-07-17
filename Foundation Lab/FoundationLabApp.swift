@@ -1,6 +1,6 @@
 //
 //  FoundationLabApp.swift
-//  Foundation Lab
+//  Sophia Flow
 //
 //  Created by Rudrank Riyam on 6/9/25.
 //
@@ -10,7 +10,7 @@ import AppIntents
 import FoundationModels
 
 @main
-struct FoundationLabApp: App {
+struct SophiaFlowApp: App {
     @State private var isModelAvailable = true
     @State private var unavailabilityReason: SystemLanguageModel.Availability.UnavailableReason?
     @State private var showModelUnavailableWarning = false
@@ -22,7 +22,7 @@ struct FoundationLabApp: App {
                 .frame(minWidth: 800, minHeight: 600)
 #endif
                 .onAppear {
-                    FoundationLabAppShortcuts.updateAppShortcutParameters()
+                    SophiaFlowAppShortcuts.updateAppShortcutParameters()
                     checkModelAvailability()
                 }
                 .tint(.main)
