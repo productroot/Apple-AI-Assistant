@@ -5,6 +5,7 @@ struct FloatingActionButton: View {
     
     var body: some View {
         Button {
+            print("🎯 FloatingActionButton tapped - triggering action")
             action()
         } label: {
             HStack(spacing: 4) {
@@ -16,9 +17,17 @@ struct FloatingActionButton: View {
             }
             .foregroundColor(.white)
             .frame(width: 56, height: 56)
-            .background(Color.accentColor)
+            .background(Color.accentColor.opacity(0.8))
             .clipShape(Circle())
-            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+            .glassEffect()
+            .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
+        }
+        .phaseAnimator([false, true]) { content, phase in
+            content
+                .offset(y: phase ? -3 : 3)
+                .scaleEffect(phase ? 1.02 : 0.98)
+        } animation: { phase in
+            .easeInOut(duration: 3.0)
         }
     }
 }

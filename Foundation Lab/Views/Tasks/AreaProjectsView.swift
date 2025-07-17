@@ -43,7 +43,8 @@ struct AreaProjectsView: View {
                                     task: task,
                                     viewModel: viewModel,
                                     isSelected: false,
-                                    onTap: {}
+                                    onTap: {},
+                                    editingTask: nil
                                 )
                             }
                         }

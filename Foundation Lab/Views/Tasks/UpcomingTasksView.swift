@@ -144,7 +144,12 @@ struct UpcomingTasksView: View {
                                 }
                             },
                             onEditingChanged: { isEditing, task in
+                                print("🔧 UpcomingTasksView onEditingChanged called")
+                                print("   isEditing: \(isEditing)")
+                                print("   task: \(task.title)")
+                                print("   current editingTask: \(editingTask?.title ?? "nil")")
                                 editingTask = isEditing ? task : nil
+                                print("   new editingTask: \(editingTask?.title ?? "nil")")
                                 if !isEditing {
                                     shouldSaveEditingTask = false
                                 }
@@ -160,7 +165,8 @@ struct UpcomingTasksView: View {
                             onDuplicateRequested: { task in
                                 duplicateTask(task)
                             },
-                            shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id
+                            shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id,
+                            editingTask: editingTask
                         )
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     }

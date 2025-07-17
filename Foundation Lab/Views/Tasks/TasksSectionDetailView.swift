@@ -176,7 +176,12 @@ struct TasksSectionDetailView: View {
                                     }
                                 },
                                 onEditingChanged: { isEditing, task in
+                                    print("🔧 TasksSectionDetailView onEditingChanged called")
+                                    print("   isEditing: \(isEditing)")
+                                    print("   task: \(task.title)")
+                                    print("   current editingTask: \(editingTask?.title ?? "nil")")
                                     editingTask = isEditing ? task : nil
+                                    print("   new editingTask: \(editingTask?.title ?? "nil")")
                                     if !isEditing {
                                         shouldSaveEditingTask = false
                                     }
@@ -192,7 +197,8 @@ struct TasksSectionDetailView: View {
                                 onDuplicateRequested: { task in
                                     duplicateTask(task)
                                 },
-                                shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id
+                                shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id,
+                                editingTask: editingTask
                             )
                             .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 16))
                             .onDrag {
@@ -228,7 +234,12 @@ struct TasksSectionDetailView: View {
                                     }
                                 },
                                 onEditingChanged: { isEditing, task in
+                                    print("🔧 TasksSectionDetailView onEditingChanged called")
+                                    print("   isEditing: \(isEditing)")
+                                    print("   task: \(task.title)")
+                                    print("   current editingTask: \(editingTask?.title ?? "nil")")
                                     editingTask = isEditing ? task : nil
+                                    print("   new editingTask: \(editingTask?.title ?? "nil")")
                                     if !isEditing {
                                         shouldSaveEditingTask = false
                                     }
@@ -244,7 +255,8 @@ struct TasksSectionDetailView: View {
                                 onDuplicateRequested: { task in
                                     duplicateTask(task)
                                 },
-                                shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id
+                                shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id,
+                                editingTask: editingTask
                             )
                             .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 16))
                             .onDrag {
@@ -363,7 +375,12 @@ struct TasksSectionDetailView: View {
                                     }
                                 },
                                 onEditingChanged: { isEditing, task in
+                                    print("🔧 TasksSectionDetailView onEditingChanged called")
+                                    print("   isEditing: \(isEditing)")
+                                    print("   task: \(task.title)")
+                                    print("   current editingTask: \(editingTask?.title ?? "nil")")
                                     editingTask = isEditing ? task : nil
+                                    print("   new editingTask: \(editingTask?.title ?? "nil")")
                                     if !isEditing {
                                         shouldSaveEditingTask = false
                                     }
@@ -379,7 +396,8 @@ struct TasksSectionDetailView: View {
                                 onDuplicateRequested: { task in
                                     duplicateTask(task)
                                 },
-                                shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id
+                                shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id,
+                                editingTask: editingTask
                             )
                             .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 16))
                             .onDrag {
@@ -555,7 +573,12 @@ struct TasksSectionDetailView: View {
                         }
                     },
                     onEditingChanged: { isEditing, task in
+                        print("🔧 TasksSectionDetailView defaultBody onEditingChanged called")
+                        print("   isEditing: \(isEditing)")
+                        print("   task: \(task.title)")
+                        print("   current editingTask: \(editingTask?.title ?? "nil")")
                         editingTask = isEditing ? task : nil
+                        print("   new editingTask: \(editingTask?.title ?? "nil")")
                         if !isEditing {
                             shouldSaveEditingTask = false
                         }
@@ -571,7 +594,8 @@ struct TasksSectionDetailView: View {
                     onDuplicateRequested: { task in
                         duplicateTask(task)
                     },
-                    shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id
+                    shouldSaveFromParent: shouldSaveEditingTask && editingTask?.id == task.id,
+                    editingTask: editingTask
                 )
                 .onDrag {
                     NSItemProvider(object: task.id.uuidString as NSString)
@@ -615,7 +639,8 @@ struct TasksSectionDetailView: View {
                         task: task,
                         viewModel: viewModel,
                         isSelected: false,
-                        onTap: { selectedTask = task }
+                        onTap: { selectedTask = task },
+                        editingTask: nil
                     )
                 }
             }

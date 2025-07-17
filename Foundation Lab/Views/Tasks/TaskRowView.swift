@@ -19,6 +19,7 @@ struct TaskRowView: View {
     let onDeleteRequested: ((TodoTask) -> Void)?
     let onDuplicateRequested: ((TodoTask) -> Void)?
     let shouldSaveFromParent: Bool
+    let editingTask: TodoTask?
 
 
     @State private var isEditing = false
@@ -60,7 +61,8 @@ struct TaskRowView: View {
         onMoveRequested: ((TodoTask) -> Void)? = nil,
         onDeleteRequested: ((TodoTask) -> Void)? = nil,
         onDuplicateRequested: ((TodoTask) -> Void)? = nil,
-        shouldSaveFromParent: Bool = false
+        shouldSaveFromParent: Bool = false,
+        editingTask: TodoTask? = nil
     ) {
         _task = State(initialValue: task)
         self.viewModel = viewModel
@@ -71,6 +73,7 @@ struct TaskRowView: View {
         self.onDeleteRequested = onDeleteRequested
         self.onDuplicateRequested = onDuplicateRequested
         self.shouldSaveFromParent = shouldSaveFromParent
+        self.editingTask = editingTask
         _editedTitle = State(initialValue: task.title)
         _editedNotes = State(initialValue: task.notes)
         _editedPriority = State(initialValue: task.priority)
@@ -96,10 +99,32 @@ struct TaskRowView: View {
         .background(isSelected ? Color.blue.opacity(0.1) : Color.clear)
         .contentShape(Rectangle())
         .onAppear {
+            print("📊 TaskRowView onAppear for task '\(task.title)'")
+            print("   isEditing: \(isEditing)")
+            print("   editingTask: \(editingTask?.id.uuidString ?? "nil")")
             loadMentionedContacts()
         }
+        .onChange(of: editingTask) { oldValue, newValue in
+            // Sync local editing state with parent's editingTask
+            let shouldBeEditing = newValue?.id == task.id
+            print("📝 TaskRowView editingTask changed for task '\(task.title)'")
+            print("   Old editingTask: \(oldValue?.id.uuidString ?? "nil")")
+            print("   New editingTask: \(newValue?.id.uuidString ?? "nil")")
+            print("   Should be editing: \(shouldBeEditing)")
+            print("   Current isEditing: \(isEditing)")
+            if shouldBeEditing != isEditing {
+                isEditing = shouldBeEditing
+                print("   ✅ Updated isEditing to: \(isEditing)")
+            }
+        }
         .onTapGesture {
-            if !isEditing && !task.isCompleted && !viewModel.isMultiSelectMode {
+            print("🔘 TaskRowView tap gesture for task '\(task.title)'")
+            print("   isEditing: \(isEditing)")
+            print("   task.isCompleted: \(task.isCompleted)")
+            print("   viewModel.isMultiSelectMode: \(viewModel.isMultiSelectMode)")
+            print("   editingTask: \(editingTask?.id.uuidString ?? "nil")")
+            if !isEditing && !task.isCompleted && !viewModel.isMultiSelectMode && editingTask == nil {
+                print("   ✅ Conditions met - entering edit mode")
                 withAnimation(.easeInOut(duration: 0.3)) {
                     isEditing = true
                     onEditingChanged?(true, task)
@@ -115,13 +140,16 @@ struct TaskRowView: View {
                 }
                 // Don't focus automatically - let user tap to show keyboard
             } else if !isEditing {
+                print("   ➡️ Not in edit mode - calling onTap")
                 onTap()
+            } else {
+                print("   ❌ Conditions not met - not entering edit mode")
             }
             // Don't handle tap in edit mode here - let the background gesture handle it
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             // Only show swipe actions when not in edit mode, multi-select mode, or for completed tasks
-            if !isEditing && !viewModel.isMultiSelectMode && !task.isCompleted {
+            if !isEditing && !viewModel.isMultiSelectMode && !task.isCompleted && editingTask == nil {
                 Button(role: .destructive) {
                     // If parent provided a delete handler, use it; otherwise show our own alert
                     if let onDeleteRequested = onDeleteRequested {
@@ -135,16 +163,18 @@ struct TaskRowView: View {
                 .tint(.red)
                 
                 Button {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        isEditing = true
-                        onEditingChanged?(true, task)
-                        // Reminder time will be set by the integrated picker
-                        editedReminderTime = task.reminderTime
-                        // Reset tags to current task tags
-                        editedTags = task.tags.joined(separator: ", ")
-                        // Reset area/project to current task values
-                        editedProject = viewModel.projects.first { $0.id == task.projectId }
-                        editedArea = viewModel.areas.first { $0.id == task.areaId }
+                    if editingTask == nil {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            isEditing = true
+                            onEditingChanged?(true, task)
+                            // Reminder time will be set by the integrated picker
+                            editedReminderTime = task.reminderTime
+                            // Reset tags to current task tags
+                            editedTags = task.tags.joined(separator: ", ")
+                            // Reset area/project to current task values
+                            editedProject = viewModel.projects.first { $0.id == task.projectId }
+                            editedArea = viewModel.areas.first { $0.id == task.areaId }
+                        }
                     }
                 } label: {
                     Label("Edit", systemImage: "pencil")
@@ -328,8 +358,8 @@ struct TaskRowView: View {
                         
                         // Date & Reminder
                         if task.scheduledDate != nil {
-                            Divider()
-                                .frame(height: 20)
+                            Text("·")
+                                .foregroundStyle(.tertiary)
                             
                             HStack(spacing: 6) {
                                 Image(systemName: task.reminderTime != nil ? "bell.badge" : "calendar")
@@ -351,8 +381,8 @@ struct TaskRowView: View {
                         
                         // Recurrence
                         if let recurrenceRule = task.recurrenceRule {
-                            Divider()
-                                .frame(height: 20)
+                            Text("·")
+                                .foregroundStyle(.tertiary)
                             
                             HStack(spacing: 6) {
                                 Image(systemName: recurrenceRule.icon)
@@ -366,8 +396,8 @@ struct TaskRowView: View {
                         
                         // Duration
                         if let duration = task.estimatedDuration {
-                            Divider()
-                                .frame(height: 20)
+                            Text("·")
+                                .foregroundStyle(.tertiary)
                             
                             HStack(spacing: 6) {
                                 Image(systemName: "clock")
@@ -381,8 +411,8 @@ struct TaskRowView: View {
                         
                         // Tags
                         if !task.tags.isEmpty {
-                            Divider()
-                                .frame(height: 20)
+                            Text("·")
+                                .foregroundStyle(.tertiary)
                             
                             HStack(spacing: 6) {
                                 Image(systemName: "tag")
@@ -423,10 +453,6 @@ struct TaskRowView: View {
         )
         .font(.body)
         .textFieldStyle(.plain)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color(.systemGray5))
-        .cornerRadius(8)
         .focused($isTitleFocused)
         .submitLabel(.done)
         .onSubmit {
@@ -454,10 +480,8 @@ struct TaskRowView: View {
             placeholder: "Notes"
         )
         .font(.body)
-        .frame(minHeight: 60, maxHeight: 120)
-        .padding(8)
-        .background(Color(.systemGray5))
-        .cornerRadius(8)
+        .foregroundStyle(.secondary)
+        .frame(minHeight: 40, maxHeight: 120)
         .focused($isNotesFocused)
         .onSubmit {
             isTitleFocused = false
@@ -468,25 +492,30 @@ struct TaskRowView: View {
     
     @ViewBuilder
     private var tagsEditSection: some View {
-        TextField("Tags (comma separated)", text: $editedTags)
-            .font(.body)
-            .textFieldStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color(.systemGray5))
-            .cornerRadius(8)
-            .textInputAutocapitalization(.never)
-            .onSubmit {
-                isTitleFocused = false
-                isNotesFocused = false
-                saveTask()
-            }
+        HStack(spacing: 6) {
+            Image(systemName: "tag")
+                .font(.system(size: 14))
+                .foregroundStyle(.indigo)
+            TextField("Tags (comma separated)", text: $editedTags)
+                .font(.caption)
+                .textFieldStyle(.plain)
+                .foregroundStyle(.secondary)
+                .textInputAutocapitalization(.never)
+                .onSubmit {
+                    isTitleFocused = false
+                    isNotesFocused = false
+                    saveTask()
+                }
+        }
     }
     
     @ViewBuilder
     private var metadataControlsSection: some View {
+        Divider()
+            .padding(.horizontal, 4)
+        
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 16) {
+            HStack(spacing: 20) {
                             // Priority Picker
                             Menu {
                                 ForEach(TodoTask.Priority.allCases, id: \.self) { priority in
@@ -510,8 +539,8 @@ struct TaskRowView: View {
                                 }
                             }
                             
-                            Divider()
-                                .frame(height: 20)
+                            Text("·")
+                                .foregroundStyle(.tertiary)
                             
                             // Date & Reminder Picker
                             HStack(spacing: 6) {
@@ -534,8 +563,8 @@ struct TaskRowView: View {
                                 showingIntegratedDatePicker = true
                             }
                             
-                            Divider()
-                                .frame(height: 20)
+                            Text("·")
+                                .foregroundStyle(.tertiary)
                             
                             // Recurrence Picker
                             Menu {
@@ -576,8 +605,8 @@ struct TaskRowView: View {
                                 }
                             }
                             
-                            Divider()
-                                .frame(height: 20)
+                            Text("·")
+                                .foregroundStyle(.tertiary)
                             
                             // Duration Picker
                             Menu {
@@ -617,8 +646,8 @@ struct TaskRowView: View {
                             }
                             .disabled(isGeneratingDuration)
                             
-                            Divider()
-                                .frame(height: 20)
+                            Text("·")
+                                .foregroundStyle(.tertiary)
                             
                             // Area/Project Selection
                             Menu {
@@ -692,7 +721,7 @@ struct TaskRowView: View {
             }
             .padding(.horizontal, 4)
         }
-        .frame(minHeight: 30)
+        .frame(height: 44)
     }
     
     @ViewBuilder
@@ -726,10 +755,10 @@ struct TaskRowView: View {
     
     @ViewBuilder
     private var simpleChecklistView: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 6) {
             // Show all items when in editing mode, only first 3 in display mode
             ForEach(isEditing ? task.checklistItems : Array(task.checklistItems.prefix(3)), id: \.id) { item in
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     // Completion toggle
                     Button {
                         if let index = task.checklistItems.firstIndex(where: { $0.id == item.id }) {
@@ -743,7 +772,7 @@ struct TaskRowView: View {
                         }
                     } label: {
                         Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                            .font(.caption)
+                            .font(.system(size: 18))
                             .foregroundStyle(item.isCompleted ? .green : .secondary)
                             .contentTransition(.symbolEffect)
                     }
@@ -751,7 +780,7 @@ struct TaskRowView: View {
                     
                     // Item title
                     Text(item.title)
-                        .font(.caption)
+                        .font(.body)
                         .strikethrough(item.isCompleted)
                         .foregroundStyle(item.isCompleted ? .secondary : .primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -760,9 +789,6 @@ struct TaskRowView: View {
                     Spacer()
                 }
                 .padding(.vertical, 2)
-                .padding(.horizontal, 8)
-                .background(Color(.systemGray6).opacity(0.3))
-                .cornerRadius(4)
             }
             
             // Show more indicator if there are more than 3 items and not in editing mode
@@ -786,18 +812,22 @@ struct TaskRowView: View {
     
     @ViewBuilder
     private var checklistSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             if !task.checklistItems.isEmpty || isGeneratingChecklist {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Divider()
+                    
                     HStack {
-                        Label("Checklist", systemImage: "checklist")
-                            .font(.caption)
-                            .foregroundStyle(.green)
-                        
-                        if !task.checklistItems.isEmpty {
-                            Text("\(task.checklistItems.filter { $0.isCompleted }.count)/\(task.checklistItems.count)")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                        HStack(spacing: 6) {
+                            Image(systemName: "checklist")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.green)
+                            
+                            if !task.checklistItems.isEmpty {
+                                Text("\(task.checklistItems.filter { $0.isCompleted }.count)/\(task.checklistItems.count)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         
                         Spacer()
@@ -808,10 +838,9 @@ struct TaskRowView: View {
                                 print("🖊️ Pencil icon tapped - opening checklist editor")
                                 showingChecklistEditor = true
                             } label: {
-                                Image(systemName: "pencil")
-                                    .font(.caption)
-                                    .foregroundStyle(.blue)
-                                    .padding(4)
+                                Image(systemName: "pencil.circle")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
                         }
@@ -821,81 +850,116 @@ struct TaskRowView: View {
                     simpleChecklistView
                     
                     // Add new item field
-                    HStack(spacing: 8) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.blue)
+                    HStack(spacing: 10) {
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 18))
+                            .foregroundStyle(.secondary)
                         
                         TextField("Add checklist item", text: $newChecklistItem)
-                            .font(.caption)
+                            .font(.body)
                             .textFieldStyle(.plain)
                             .focused($isNewChecklistItemFocused)
                             .onSubmit {
                                 addChecklistItem()
                             }
                     }
-                    .padding(.top, 4)
                 }
             }
             
             // AI Generate Checklist Button
-            Button {
-                print("🔘 Generate Checklist button tapped")
-                generateChecklist()
-            } label: {
-                HStack(spacing: 6) {
-                    if isGeneratingChecklist {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    } else {
-                        Image(systemName: "sparkles")
+            if task.checklistItems.isEmpty {
+                Divider()
+                
+                Button {
+                    print("🔘 Generate Checklist button tapped")
+                    generateChecklist()
+                } label: {
+                    HStack(spacing: 8) {
+                        if isGeneratingChecklist {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 14))
+                        }
+                        Text("Generate Checklist with AI")
+                            .font(.body)
                     }
-                    Text(task.checklistItems.isEmpty ? "Generate Checklist" : "Add More Items")
+                    .foregroundStyle(.blue)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .font(.caption)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.blue)
-                .cornerRadius(8)
+                .buttonStyle(.plain)
+                .disabled(isGeneratingChecklist)
             }
-            .buttonStyle(.plain)
-            .disabled(isGeneratingChecklist)
         }
     }
     
     private var expandedEditView: some View {
         VStack(spacing: 0) {
-            // Main editing area
-            VStack(spacing: 12) {
-                // Title Field
-                titleEditSection
-                
-                // Notes Field
+            // Title Field
+            titleEditSection
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+            
+            // Notes Field (if has content or focused)
+            if !editedNotes.isEmpty || isNotesFocused {
                 notesEditSection
-                
-                // Tags Field
-                tagsEditSection
-                
-                // Metadata Controls
-                metadataControlsSection
-                
-                // Mentioned Contacts
-                mentionedContactsSection
-                
-                // Checklist
-                checklistSection
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+            } else {
+                Button {
+                    isNotesFocused = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "note.text")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.secondary)
+                        Text("Add notes")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
+            
+            // Tags Field (if has content)
+            if !editedTags.isEmpty {
+                tagsEditSection
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+            }
+            
+            // Metadata Controls
+            metadataControlsSection
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+            
+            // Mentioned Contacts
+            if !editingMentionedContacts.isEmpty {
+                mentionedContactsSection
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+            }
+            
+            // Checklist
+            if !task.checklistItems.isEmpty || isGeneratingChecklist {
+                checklistSection
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+            }
         }
-        .background(
+        .background(Color(.systemBackground))
+        .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemGray6))
-                .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 2)
+                .stroke(Color(.systemGray4), lineWidth: 0.5)
         )
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
     }
     
     private func saveTask() {

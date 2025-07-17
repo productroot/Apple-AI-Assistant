@@ -400,8 +400,11 @@ let helpContent: [String: (overview: String, sections: [HelpSection])] = [
                 title: "Inline Editing",
                 content: [
                     HelpItem(type: .text, content: "Tap on a task to expand and edit inline"),
-                    HelpItem(type: .text, content: "Tap outside to save changes"),
-                    HelpItem(type: .text, content: "Use keyboard shortcuts for faster editing")
+                    HelpItem(type: .text, content: "Only one task can be edited at a time"),
+                    HelpItem(type: .text, content: "All fields are directly editable without borders"),
+                    HelpItem(type: .text, content: "Tap outside or press Done to save changes"),
+                    HelpItem(type: .text, content: "Use the metadata buttons to set priority, date, and more"),
+                    HelpItem(type: .tip, content: "Swipe right on a task for quick actions")
                 ]
             )
         ]

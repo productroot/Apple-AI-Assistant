@@ -516,8 +516,8 @@ struct TasksView: View {
                             showingQuickAddOverlay = true
                         }
                     })
-                        .padding(.trailing, 16)
-                        .padding(.bottom, 16)
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 25)
                 }
             }
         }
@@ -532,8 +532,8 @@ struct TasksView: View {
                             showingQuickAddOverlay = true
                         }
                     })
-                        .padding(.trailing, 16)
-                        .padding(.bottom, 16)
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 25)
                 }
             }
         }
