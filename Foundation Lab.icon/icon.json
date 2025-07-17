@@ -14,8 +14,8 @@
           "fill" : "automatic",
           "glass" : true,
           "hidden" : false,
-          "image-name" : "Alex-Image-1751189635.png",
-          "name" : "Alex-Image-1751189635",
+          "image-name" : "generated-image.png",
+          "name" : "generated-image",
           "position" : {
             "scale" : 1.2,
             "translation-in-points" : [
