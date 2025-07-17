@@ -234,7 +234,7 @@ struct AreaSectionView: View {
     }
     
     private var areaTaskCount: Int {
-        viewModel.tasks.filter { !$0.isCompleted && $0.areaId == area.id }.count
+        viewModel.tasks.filter { !$0.isCompleted && $0.areaId == area.id && $0.projectId == nil }.count
     }
     
     private func moveProjects(in area: Area, from source: IndexSet, to destination: Int) {

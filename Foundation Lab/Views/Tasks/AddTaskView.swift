@@ -83,29 +83,73 @@ struct AddTaskView: View {
                 }
                 
                 Section {
-                    // Area Picker
-                    if !viewModel.areas.isEmpty {
-                        Picker("Area", selection: $selectedArea) {
-                            Text("None").tag(nil as Area?)
-                            ForEach(viewModel.areas) { area in
-                                Label(area.name, systemImage: area.icon)
-                                    .tag(area as Area?)
-                            }
-                        }
-                    }
-                    
-                    // Project Picker
-                    if !viewModel.projects.isEmpty {
-                        Picker("Project", selection: $selectedProject) {
-                            Text("None").tag(nil as Project?)
-                            ForEach(viewModel.projects) { project in
-                                HStack {
-                                    Circle()
-                                        .fill(project.displayColor)
-                                        .frame(width: 8, height: 8)
-                                    Text(project.name)
+                    // Area/Project Picker - Mutually exclusive
+                    VStack(alignment: .leading, spacing: 8) {
+                        if !viewModel.areas.isEmpty || !viewModel.projects.isEmpty {
+                            Menu {
+                                // Clear selection
+                                Button("None") {
+                                    selectedArea = nil
+                                    selectedProject = nil
                                 }
-                                .tag(project as Project?)
+                                
+                                // Areas section
+                                if !viewModel.areas.isEmpty {
+                                    Section("Areas") {
+                                        ForEach(viewModel.areas) { area in
+                                            Button {
+                                                selectedArea = area
+                                                selectedProject = nil // Clear project when area is selected
+                                            } label: {
+                                                Label(area.name, systemImage: area.icon)
+                                                    .foregroundStyle(area.displayColor)
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Projects section
+                                if !viewModel.projects.isEmpty {
+                                    Section("Projects") {
+                                        ForEach(viewModel.projects) { project in
+                                            Button {
+                                                selectedProject = project
+                                                selectedArea = viewModel.areas.first { $0.id == project.areaId } // Set area to project's area
+                                            } label: {
+                                                HStack {
+                                                    Circle()
+                                                        .fill(project.displayColor)
+                                                        .frame(width: 8, height: 8)
+                                                    Text(project.name)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Text("Location")
+                                    Spacer()
+                                    if let project = selectedProject {
+                                        HStack {
+                                            Circle()
+                                                .fill(project.displayColor)
+                                                .frame(width: 8, height: 8)
+                                            Text(project.name)
+                                        }
+                                        .foregroundStyle(.primary)
+                                    } else if let area = selectedArea {
+                                        HStack {
+                                            Image(systemName: area.icon)
+                                                .foregroundStyle(area.displayColor)
+                                            Text(area.name)
+                                        }
+                                        .foregroundStyle(.primary)
+                                    } else {
+                                        Text("Choose...")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
                             }
                         }
                     }
@@ -184,6 +228,12 @@ struct AddTaskView: View {
             mentionedContactIds: mentionedContacts.map { $0.identifier },
             reminderTime: reminderTime
         )
+        
+        print("📝 Creating task with location:")
+        print("   Project: \(selectedProject?.name ?? "none")")
+        print("   Area: \(selectedArea?.name ?? "none")")
+        print("   ProjectId: \(selectedProject?.id.uuidString ?? "none")")
+        print("   AreaId: \(selectedArea?.id.uuidString ?? "none")")
         
         viewModel.addTask(task)
         print("✅ Added task with \(mentionedContacts.count) mentioned contacts")

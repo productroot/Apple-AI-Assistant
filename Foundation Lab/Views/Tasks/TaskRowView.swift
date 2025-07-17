@@ -44,6 +44,8 @@ struct TaskRowView: View {
     @State private var editedReminderTime: Date?
     @State private var showingChecklistEditor = false
     @State private var editedTags: String = ""
+    @State private var editedProject: Project?
+    @State private var editedArea: Area?
     // Reminder state is now managed by the integrated picker
     @FocusState private var isTitleFocused: Bool
     @FocusState private var isNotesFocused: Bool
@@ -78,6 +80,8 @@ struct TaskRowView: View {
         _editedDuration = State(initialValue: task.estimatedDuration)
         _editedReminderTime = State(initialValue: task.reminderTime)
         _editedTags = State(initialValue: task.tags.joined(separator: ", "))
+        _editedProject = State(initialValue: viewModel.projects.first { $0.id == task.projectId })
+        _editedArea = State(initialValue: viewModel.areas.first { $0.id == task.areaId })
         // Reminder state is managed by the integrated picker
     }
 
@@ -105,6 +109,9 @@ struct TaskRowView: View {
                     editedReminderTime = task.reminderTime
                     // Reset tags to current task tags
                     editedTags = task.tags.joined(separator: ", ")
+                    // Reset area/project to current task values
+                    editedProject = viewModel.projects.first { $0.id == task.projectId }
+                    editedArea = viewModel.areas.first { $0.id == task.areaId }
                 }
                 // Don't focus automatically - let user tap to show keyboard
             } else if !isEditing {
@@ -135,6 +142,9 @@ struct TaskRowView: View {
                         editedReminderTime = task.reminderTime
                         // Reset tags to current task tags
                         editedTags = task.tags.joined(separator: ", ")
+                        // Reset area/project to current task values
+                        editedProject = viewModel.projects.first { $0.id == task.projectId }
+                        editedArea = viewModel.areas.first { $0.id == task.areaId }
                     }
                 } label: {
                     Label("Edit", systemImage: "pencil")
@@ -606,6 +616,79 @@ struct TaskRowView: View {
                                 }
                             }
                             .disabled(isGeneratingDuration)
+                            
+                            Divider()
+                                .frame(height: 20)
+                            
+                            // Area/Project Selection
+                            Menu {
+                                // Clear selection
+                                Button("None") {
+                                    editedArea = nil
+                                    editedProject = nil
+                                }
+                                
+                                // Areas section
+                                if !viewModel.areas.isEmpty {
+                                    Section("Areas") {
+                                        ForEach(viewModel.areas) { area in
+                                            Button {
+                                                editedArea = area
+                                                editedProject = nil // Clear project when area is selected
+                                            } label: {
+                                                Label(area.name, systemImage: area.icon)
+                                                    .foregroundStyle(area.displayColor)
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Projects section
+                                if !viewModel.projects.isEmpty {
+                                    Section("Projects") {
+                                        ForEach(viewModel.projects) { project in
+                                            Button {
+                                                editedProject = project
+                                                editedArea = viewModel.areas.first { $0.id == project.areaId } // Set area to project's area
+                                            } label: {
+                                                HStack {
+                                                    Circle()
+                                                        .fill(project.displayColor)
+                                                        .frame(width: 8, height: 8)
+                                                    Text(project.name)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    if let project = editedProject {
+                                        Circle()
+                                            .fill(project.displayColor)
+                                            .frame(width: 16, height: 16)
+                                        Text(project.name)
+                                            .font(.caption)
+                                            .foregroundStyle(.primary)
+                                            .lineLimit(1)
+                                    } else if let area = editedArea {
+                                        Image(systemName: area.icon)
+                                            .font(.system(size: 16))
+                                            .foregroundStyle(area.displayColor)
+                                        Text(area.name)
+                                            .font(.caption)
+                                            .foregroundStyle(.primary)
+                                            .lineLimit(1)
+                                    } else {
+                                        Image(systemName: "folder")
+                                            .font(.system(size: 16))
+                                            .foregroundStyle(.secondary)
+                                        Text("Location")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
             }
             .padding(.horizontal, 4)
         }
@@ -831,6 +914,14 @@ struct TaskRowView: View {
         updatedTask.customRecurrence = editedCustomRecurrence
         updatedTask.estimatedDuration = editedDuration
         updatedTask.reminderTime = editedReminderTime
+        updatedTask.projectId = editedProject?.id
+        updatedTask.areaId = editedArea?.id
+        
+        print("📝 Updating task location:")
+        print("   Project: \(editedProject?.name ?? "none")")
+        print("   Area: \(editedArea?.name ?? "none")")
+        print("   ProjectId: \(editedProject?.id.uuidString ?? "none")")
+        print("   AreaId: \(editedArea?.id.uuidString ?? "none")")
         
         // Parse tags from comma-separated string
         let tagArray = editedTags.split(separator: ",").map { String($0.trimmingCharacters(in: .whitespaces)) }.filter { !$0.isEmpty }

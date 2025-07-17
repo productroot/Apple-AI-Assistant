@@ -38,7 +38,7 @@
 			path = Physiqa;
 			sourceTree = "<group>";
 		};
-		0ADB46AD2E0CE6C100C29293 /* Sophia Flow */ = {
+		0ADB46AD2E0CE6C100C29293 /* Foundation Lab */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Foundation Lab";
 			sourceTree = "<group>";
@@ -95,7 +95,7 @@
 			children = (
 				894F6A542E1B26DB0089EAEB /* CLAUDE.md */,
 				89A5097E2E1D6B58001C25E9 /* GEMINI.md */,
-				0ADB46AD2E0CE6C100C29293 /* Sophia Flow */,
+				0ADB46AD2E0CE6C100C29293 /* Foundation Lab */,
 				0ABC0C9C2E09AB5300A09018 /* Physiqa */,
 				0ADB46DD2E0CE81900C29293 /* Psylean */,
 				0ADB48282E0D84EE00C29293 /* Murmer */,
@@ -131,7 +131,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				0ADB46AD2E0CE6C100C29293 /* Sophia Flow */,
+				0ADB46AD2E0CE6C100C29293 /* Foundation Lab */,
 			);
 			name = "Sophia Flow";
 			packageProductDependencies = (

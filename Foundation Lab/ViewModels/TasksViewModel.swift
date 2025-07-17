@@ -52,7 +52,7 @@ final class TasksViewModel {
         case .section(let section):
             filtered = tasksForSection(section)
         case .area(let area):
-            filtered = tasks.filter { $0.areaId == area.id }
+            filtered = tasks.filter { $0.areaId == area.id && $0.projectId == nil }
         case .project(let project):
             filtered = tasks.filter { $0.projectId == project.id }
         case .tag(let tag):

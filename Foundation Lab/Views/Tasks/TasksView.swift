@@ -69,6 +69,10 @@ struct TasksView: View {
         .navigationDestination(for: TaskFilter.self) { filter in
             TasksSectionDetailView(viewModel: viewModel, filter: filter)
         }
+        .navigationDestination(for: Area.self) { area in
+            print("🚀 NavigationDestination triggered for area: \(area.name)")
+            return AreaProjectsView(area: area, viewModel: viewModel)
+        }
         .toolbar {
             aiToolsButton
             helpAndEditButtons
@@ -215,25 +219,27 @@ struct TasksView: View {
                 }
             }) {
                 ForEach(viewModel.areas) { area in
-                    HStack {
-                        Image(systemName: area.icon)
-                            .foregroundStyle(area.displayColor)
-                            .frame(width: 28)
-                        
-                        Text(area.name)
-                            .font(.body)
-                            .fontWeight(.semibold)
-                        
-                        Spacer()
-                        
-                        if areaTaskCount(for: area) > 0 {
-                            Text("\(areaTaskCount(for: area))")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                    NavigationLink(value: area) {
+                        HStack {
+                            Image(systemName: area.icon)
+                                .foregroundStyle(area.displayColor)
+                                .frame(width: 28)
+                            
+                            Text(area.name)
+                                .font(.body)
+                                .fontWeight(.semibold)
+                            
+                            Spacer()
+                            
+                            if areaTaskCount(for: area) > 0 {
+                                Text("\(areaTaskCount(for: area))")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 16)
                     }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 16)
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color(UIColor.secondarySystemGroupedBackground))
                 }
@@ -348,22 +354,26 @@ struct TasksView: View {
                 }
             }) {
                 ForEach(viewModel.areas) { area in
-                    HStack {
-                        Image(systemName: area.icon)
-                            .foregroundStyle(area.displayColor)
-                            .frame(width: 28)
-                        
-                        Text(area.name)
-                            .font(.body)
-                        
-                        Spacer()
-                        
-                        Text("\(areaTaskCount(for: area))")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+                    NavigationLink(value: area) {
+                        HStack {
+                            Image(systemName: area.icon)
+                                .foregroundStyle(area.displayColor)
+                                .frame(width: 28)
+                            
+                            Text(area.name)
+                                .font(.body)
+                            
+                            Spacer()
+                            
+                            if areaTaskCount(for: area) > 0 {
+                                Text("\(areaTaskCount(for: area))")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 16)
                     }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 16)
                 }
                 .onMove { from, to in
                     viewModel.areas.move(fromOffsets: from, toOffset: to)
@@ -583,7 +593,7 @@ struct TasksView: View {
     }
     
     private func areaTaskCount(for area: Area) -> Int {
-        viewModel.tasks.filter { !$0.isCompleted && $0.areaId == area.id }.count
+        viewModel.tasks.filter { !$0.isCompleted && $0.areaId == area.id && $0.projectId == nil }.count
     }
     
     private func projectTaskCount(for project: Project) -> Int {
