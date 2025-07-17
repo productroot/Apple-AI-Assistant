@@ -285,7 +285,7 @@ struct TasksSectionDetailView: View {
                             }) {
                                 HStack {
                                     Text(expandedProjects.contains(project.id) ? "Hide Completed" : "Show \(completedTasks.count) Completed")
-                                        .font(.caption)
+                                        .font(.caption2)
                                         .foregroundStyle(.secondary)
                                     
                                     Spacer()
@@ -426,7 +426,7 @@ struct TasksSectionDetailView: View {
                             }) {
                                 HStack {
                                     Text(expandedProjects.contains(project.id) ? "Hide Completed" : "Show \(completedTasks.count) Completed")
-                                        .font(.caption)
+                                        .font(.caption2)
                                         .foregroundStyle(.secondary)
                                     
                                     Spacer()
@@ -631,6 +631,8 @@ struct TasksSectionDetailView: View {
             Button(action: { showCompleted.toggle() }) {
                 HStack {
                     Text(showCompleted ? "Hide Completed Tasks" : "Show \(completedTasks.count) Completed Tasks")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                     Spacer()
                     Image(systemName: "chevron.right")
                         .rotationEffect(.degrees(showCompleted ? 90 : 0))
