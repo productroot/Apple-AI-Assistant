@@ -22,6 +22,7 @@ struct TasksSectionDetailView: View {
     @State private var showingProjectDeadlineSheet = false
     @State private var showingProjectMoveSheet = false
     @State private var projectToEdit: Project?
+    @State private var sortOption: TaskSortOption = .priority
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -45,6 +46,12 @@ struct TasksSectionDetailView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             toolbarContent
+        }
+        .onAppear {
+            sortOption = viewModel.sortOption
+        }
+        .onChange(of: sortOption) { _, newValue in
+            viewModel.sortOption = newValue
         }
         .overlay(alignment: .bottomTrailing) {
             if editingTask == nil {
@@ -727,6 +734,19 @@ struct TasksSectionDetailView: View {
     
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
+            Menu {
+                Picker("Sort by", selection: $sortOption) {
+                    ForEach(TaskSortOption.allCases, id: \.self) { option in
+                        Label(option.displayName, systemImage: option.icon)
+                            .tag(option)
+                    }
+                }
+            } label: {
+                Label("Sort", systemImage: sortOption.icon)
+            }
+        }
+        
         ToolbarItem(placement: .primaryAction) {
             Button {
                 showingAddTask = true

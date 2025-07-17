@@ -12,6 +12,7 @@ struct AreaProjectsView: View {
     let viewModel: TasksViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showingAddProject = false
+    @State private var sortOption: TaskSortOption = .priority
     
     init(area: Area, viewModel: TasksViewModel) {
         self.area = area
@@ -123,6 +124,7 @@ struct AreaProjectsView: View {
             .navigationTitle(area.name)
             .navigationBarTitleDisplayMode(.large)
             .onAppear {
+                sortOption = viewModel.sortOption
                 print("🔍 AreaProjectsView Debug for area: \(area.name)")
                 print("   Area ID: \(area.id)")
                 print("   Total projects in viewModel: \(viewModel.projects.count)")
@@ -141,6 +143,19 @@ struct AreaProjectsView: View {
                 }
             }
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Menu {
+                        Picker("Sort by", selection: $sortOption) {
+                            ForEach(TaskSortOption.allCases, id: \.self) { option in
+                                Label(option.displayName, systemImage: option.icon)
+                                    .tag(option)
+                            }
+                        }
+                    } label: {
+                        Label("Sort", systemImage: sortOption.icon)
+                    }
+                }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Add Project") {
                         showingAddProject = true
@@ -149,6 +164,9 @@ struct AreaProjectsView: View {
             }
             .sheet(isPresented: $showingAddProject) {
                 AddProjectView(viewModel: viewModel, preselectedArea: area)
+            }
+            .onChange(of: sortOption) { _, newValue in
+                viewModel.sortOption = newValue
             }
         }
     }

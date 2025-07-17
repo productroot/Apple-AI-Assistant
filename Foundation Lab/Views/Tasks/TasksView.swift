@@ -19,6 +19,7 @@ struct TasksView: View {
     @State private var showingDeleteProjectAlert = false
     @State private var areaToDelete: Area?
     @State private var projectToDelete: Project?
+    @State private var sortOption: TaskSortOption = .priority
 #if os(iOS)
     @State private var editMode: EditMode = .inactive
 #else
@@ -39,6 +40,12 @@ struct TasksView: View {
             }
             
             overlayViews
+        }
+        .onAppear {
+            sortOption = viewModel.sortOption
+        }
+        .onChange(of: sortOption) { _, newValue in
+            viewModel.sortOption = newValue
         }
     }
     
@@ -105,6 +112,17 @@ struct TasksView: View {
     private var aiToolsButton: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
             Menu {
+                Section {
+                    Picker("Sort by", selection: $sortOption) {
+                        ForEach(TaskSortOption.allCases, id: \.self) { option in
+                            Label(option.displayName, systemImage: option.icon)
+                                .tag(option)
+                        }
+                    }
+                }
+                
+                Divider()
+                
                 Button {
                     showingOptimization = true
                 } label: {

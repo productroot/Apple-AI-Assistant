@@ -23,6 +23,30 @@ enum TaskError: LocalizedError {
     }
 }
 
+// MARK: - Sorting Options
+enum TaskSortOption: String, CaseIterable {
+    case priority = "priority"
+    case date = "date"
+    
+    var displayName: String {
+        switch self {
+        case .priority:
+            return "Priority"
+        case .date:
+            return "Date"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .priority:
+            return "exclamationmark.circle"
+        case .date:
+            return "calendar"
+        }
+    }
+}
+
 @Observable
 final class TasksViewModel {
     // MARK: - Singleton
@@ -37,6 +61,12 @@ final class TasksViewModel {
     var searchText: String = ""
     var selectedTasks: Set<UUID> = []
     var isMultiSelectMode: Bool = false
+    var sortOption: TaskSortOption = .priority {
+        didSet {
+            UserDefaults.standard.set(sortOption.rawValue, forKey: "taskSortOption")
+            print("📊 Sort option changed to: \(sortOption.displayName)")
+        }
+    }
     
     private let cloudService = iCloudService.shared
     private var isLoadingFromiCloud = false
@@ -71,12 +101,7 @@ final class TasksViewModel {
             }
         }
         
-        return filtered.sorted { lhs, rhs in
-            if lhs.priority != rhs.priority {
-                return lhs.priority.sortOrder > rhs.priority.sortOrder
-            }
-            return lhs.createdAt > rhs.createdAt
-        }
+        return sortTasks(filtered)
     }
     
     var todayTasks: [TodoTask] {
@@ -102,6 +127,8 @@ final class TasksViewModel {
             }
             groupedTasks[project, default: []].append(task)
         }
+        
+        // Tasks are already sorted by tasksForSection
 
         return groupedTasks
     }
@@ -122,9 +149,65 @@ final class TasksViewModel {
         return groupedTasks
     }
     
+    // MARK: - Sorting
+    private func sortTasks(_ tasks: [TodoTask]) -> [TodoTask] {
+        switch sortOption {
+        case .priority:
+            return tasks.sorted { lhs, rhs in
+                // First sort by completion status
+                if lhs.isCompleted != rhs.isCompleted {
+                    return !lhs.isCompleted && rhs.isCompleted
+                }
+                // Then by priority
+                if lhs.priority != rhs.priority {
+                    return lhs.priority.sortOrder > rhs.priority.sortOrder
+                }
+                // Finally by creation date
+                return lhs.createdAt > rhs.createdAt
+            }
+        case .date:
+            return tasks.sorted { lhs, rhs in
+                // First sort by completion status
+                if lhs.isCompleted != rhs.isCompleted {
+                    return !lhs.isCompleted && rhs.isCompleted
+                }
+                // Then by scheduled date (nil dates go to the end)
+                switch (lhs.scheduledDate, rhs.scheduledDate) {
+                case (nil, nil):
+                    // If both have no date, sort by priority
+                    if lhs.priority != rhs.priority {
+                        return lhs.priority.sortOrder > rhs.priority.sortOrder
+                    }
+                    return lhs.createdAt > rhs.createdAt
+                case (nil, _):
+                    return false
+                case (_, nil):
+                    return true
+                case (let lhsDate?, let rhsDate?):
+                    if lhsDate != rhsDate {
+                        return lhsDate < rhsDate
+                    }
+                    // If same date, sort by priority
+                    if lhs.priority != rhs.priority {
+                        return lhs.priority.sortOrder > rhs.priority.sortOrder
+                    }
+                    return lhs.createdAt > rhs.createdAt
+                }
+            }
+        }
+    }
+    
     // MARK: - Initialization
     private init() {
         print("🚀 TasksViewModel initializing...")
+        
+        // Load saved sort option
+        if let savedSortOption = UserDefaults.standard.string(forKey: "taskSortOption"),
+           let sortOption = TaskSortOption(rawValue: savedSortOption) {
+            self.sortOption = sortOption
+            print("📊 Loaded saved sort option: \(sortOption.displayName)")
+        }
+        
         // Always load local data first
         loadLocalData()
         // Don't auto-sync on startup to avoid loops
@@ -501,27 +584,32 @@ final class TasksViewModel {
         let startOfToday = calendar.startOfDay(for: now)
         let endOfToday = calendar.date(byAdding: .day, value: 1, to: startOfToday)!
         
+        let filtered: [TodoTask]
         switch section {
         case .inbox:
-            return tasks.filter { !$0.isCompleted && $0.scheduledDate == nil && $0.projectId == nil }
+            filtered = tasks.filter { !$0.isCompleted && $0.scheduledDate == nil && $0.projectId == nil }
         case .today:
-            return tasks.filter { task in
+            filtered = tasks.filter { task in
                 !task.isCompleted &&
                 (task.scheduledDate != nil && task.scheduledDate! < endOfToday)
             }
         case .upcoming:
-            return tasks.filter { task in
+            filtered = tasks.filter { task in
                 !task.isCompleted &&
                 task.scheduledDate != nil &&
                 task.scheduledDate! >= endOfToday
             }
         case .anytime:
-            return tasks.filter { !$0.isCompleted && $0.projectId != nil }
+            filtered = tasks.filter { !$0.isCompleted && $0.projectId != nil }
         case .someday:
-            return tasks.filter { !$0.isCompleted && $0.tags.contains("someday") }
+            filtered = tasks.filter { !$0.isCompleted && $0.tags.contains("someday") }
         case .logbook:
+            // For logbook, always sort by completion date
             return tasks.filter { $0.isCompleted }.sorted { ($0.completionDate ?? Date()) > ($1.completionDate ?? Date()) }
         }
+        
+        // Apply sorting (except for logbook which has its own sorting)
+        return sortTasks(filtered)
     }
     
     private func dateForSection(_ section: TaskSection) -> Date? {

@@ -69,6 +69,12 @@ struct HelpTopicsView: View {
             // Organization
             Section("Organization") {
                 HelpTopicRow(
+                    icon: "arrow.up.arrow.down",
+                    title: "Sorting Tasks",
+                    description: "Sort by priority or scheduled date"
+                )
+                
+                HelpTopicRow(
                     icon: "folder",
                     title: "Using Areas",
                     description: "Group related projects together"
@@ -576,6 +582,38 @@ let helpContent: [String: (overview: String, sections: [HelpSection])] = [
                     HelpItem(type: .tip, content: "Reserve ASAP for true emergencies"),
                     HelpItem(type: .tip, content: "Most tasks should be Medium priority"),
                     HelpItem(type: .tip, content: "Review and adjust priorities weekly")
+                ]
+            )
+        ]
+    ),
+    
+    "Sorting Tasks": (
+        overview: "Choose how tasks are ordered in your lists",
+        sections: [
+            HelpSection(
+                title: "Sort Options",
+                content: [
+                    HelpItem(type: .text, content: "Priority Sort: Orders tasks by priority level (ASAP → None)"),
+                    HelpItem(type: .text, content: "Date Sort: Orders tasks by scheduled date (earliest first)"),
+                    HelpItem(type: .text, content: "Tasks without dates appear at the end when sorting by date")
+                ]
+            ),
+            HelpSection(
+                title: "How to Change Sorting",
+                content: [
+                    HelpItem(type: .step, content: "Open the AI Tools menu (sparkles icon)"),
+                    HelpItem(type: .step, content: "Select 'Sort by' option"),
+                    HelpItem(type: .step, content: "Choose Priority or Date"),
+                    HelpItem(type: .tip, content: "Your sort preference is saved automatically")
+                ]
+            ),
+            HelpSection(
+                title: "Sorting Behavior",
+                content: [
+                    HelpItem(type: .text, content: "Uncompleted tasks always appear before completed ones"),
+                    HelpItem(type: .text, content: "Tasks with same priority/date are sorted by creation time"),
+                    HelpItem(type: .text, content: "Logbook tasks are always sorted by completion date"),
+                    HelpItem(type: .tip, content: "Sort option applies to all views and projects")
                 ]
             )
         ]

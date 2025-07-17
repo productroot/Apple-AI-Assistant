@@ -17,7 +17,8 @@ struct UpcomingTasksView: View {
     @State private var shouldSaveEditingTask = false
     
     private var groupedTasks: [(Date, [TodoTask])] {
-        let tasks = viewModel.upcomingTasks.sorted { $0.scheduledDate ?? Date() < $1.scheduledDate ?? Date() }
+        // upcomingTasks already comes sorted from viewModel
+        let tasks = viewModel.upcomingTasks
         
         let grouped = Dictionary(grouping: tasks) { task in
             let calendar = Calendar.current
