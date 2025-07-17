@@ -448,7 +448,7 @@ struct TasksSectionDetailView: View {
     private var logbookBody: some View {
         List {
             ForEach(logbookTasks) { task in
-                TaskRowView(
+                LogbookTaskRowView(
                     task: task,
                     viewModel: viewModel,
                     isSelected: viewModel.selectedTasks.contains(task.id),
@@ -836,6 +836,121 @@ struct TasksSectionDetailView: View {
                 Text("New Task")
                     .font(.caption)
             }
+        }
+    }
+}
+
+// MARK: - LogbookTaskRowView
+struct LogbookTaskRowView: View {
+    @State var task: TodoTask
+    var viewModel: TasksViewModel
+    let isSelected: Bool
+    let onTap: () -> Void
+    let onEditingChanged: ((Bool, TodoTask) -> Void)?
+    let onMoveRequested: ((TodoTask) -> Void)?
+    let onDeleteRequested: ((TodoTask) -> Void)?
+    let onDuplicateRequested: ((TodoTask) -> Void)?
+    let shouldSaveFromParent: Bool
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Completion checkbox
+            Button(action: {
+                task.isCompleted.toggle()
+                task.completionDate = task.isCompleted ? Date() : nil
+                viewModel.updateTask(task)
+            }) {
+                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(task.isCompleted ? .green : .secondary)
+                    .font(.title2)
+            }
+            .buttonStyle(.plain)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                // Task title
+                Text(task.title)
+                    .font(.body)
+                    .foregroundStyle(task.isCompleted ? .secondary : .primary)
+                    .strikethrough(task.isCompleted)
+                
+                // Metadata line with project/area info
+                HStack(spacing: 8) {
+                    // Priority
+                    if task.priority != .none {
+                        HStack(spacing: 4) {
+                            Image(systemName: task.priority.icon)
+                                .font(.caption)
+                                .foregroundStyle(task.priority.color)
+                            Text(task.priority.name)
+                                .font(.caption)
+                                .foregroundStyle(task.priority.color)
+                        }
+                    }
+                    
+                    // Project
+                    if let project = viewModel.projects.first(where: { $0.id == task.projectId }) {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(project.displayColor)
+                                .frame(width: 8, height: 8)
+                            Text(project.name)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    
+                    // Area
+                    if let area = viewModel.areas.first(where: { $0.id == task.areaId }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: area.icon)
+                                .font(.system(size: 10))
+                                .foregroundStyle(area.displayColor)
+                            Text(area.name)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // Completion date
+                    if let completionDate = task.completionDate {
+                        Text(formatCompletionDate(completionDate))
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
+    }
+    
+    private func formatCompletionDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        let calendar = Calendar.current
+        
+        if calendar.isDateInToday(date) {
+            formatter.dateStyle = .none
+            formatter.timeStyle = .short
+            return "Today \(formatter.string(from: date))"
+        } else if calendar.isDateInYesterday(date) {
+            formatter.dateStyle = .none
+            formatter.timeStyle = .short
+            return "Yesterday \(formatter.string(from: date))"
+        } else if calendar.isDate(date, equalTo: Date(), toGranularity: .weekOfYear) {
+            formatter.dateFormat = "EEEE h:mm a"
+            return formatter.string(from: date)
+        } else {
+            formatter.dateStyle = .short
+            formatter.timeStyle = .short
+            return formatter.string(from: date)
         }
     }
 }
